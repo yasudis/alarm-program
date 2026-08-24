@@ -1,4 +1,5 @@
-﻿using AlarmProgram.Application.Configuration;
+﻿using AlarmProgram.Application.Abstractions;
+using AlarmProgram.Application.Configuration;
 using AlarmProgram.Infrastructure;
 using AlarmProgram.UI.ViewModels;
 using Microsoft.Extensions.Configuration;
@@ -57,11 +58,14 @@ public partial class App : System.Windows.Application
 
         var logger = _host.Services.GetRequiredService<ILogger<App>>();
         var appOptions = _host.Services.GetRequiredService<IOptions<AppOptions>>().Value;
+        var settings = await _host.Services.GetRequiredService<ISettingsStore>().LoadAsync();
 
         logger.LogInformation(
-            "Приложение {ApplicationName} запущено в окружении {Environment}",
+            "Приложение {ApplicationName} запущено в окружении {Environment}. Telegram: {TelegramEnabled}, Discord: {DiscordEnabled}",
             appOptions.ApplicationName,
-            appOptions.Environment);
+            appOptions.Environment,
+            settings.TelegramEnabled,
+            settings.DiscordEnabled);
 
         _host.Services.GetRequiredService<MainWindow>().Show();
 

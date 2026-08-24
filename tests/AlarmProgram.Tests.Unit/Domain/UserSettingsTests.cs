@@ -1,0 +1,99 @@
+using System.Text.Json;
+using AlarmProgram.Domain;
+
+namespace AlarmProgram.Tests.Unit.Domain;
+
+public class UserSettingsTests
+{
+    [Fact]
+    public void Default_settings_are_valid_until_channels_are_enabled()
+    {
+        var settings = new UserSettings();
+
+        Assert.True(settings.IsValid);
+        Assert.Empty(settings.Validate());
+        Assert.True(settings.NotifyOnStartup);
+        Assert.True(settings.NotifyOnShutdown);
+        Assert.True(settings.NotifyOnRestart);
+        Assert.True(settings.NotifyOnUnexpectedShutdown);
+    }
+
+    [Fact]
+    public void Validate_requires_telegram_token_and_chat_id_when_telegram_is_enabled()
+    {
+        var settings = new UserSettings { TelegramEnabled = true };
+
+        var errors = settings.Validate();
+
+        Assert.False(settings.IsValid);
+        Assert.Contains(errors, error => error.Contains("token", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(errors, error => error.Contains("chat id", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Validate_accepts_well_formed_telegram_and_discord_settings()
+    {
+        var settings = new UserSettings
+        {
+            TelegramEnabled = true,
+            TelegramBotToken = "123456789:AAExampleTelegramBotTokenValue123456",
+            TelegramChatId = "-1001234567890",
+            DiscordEnabled = true,
+            DiscordWebhookUrl = "https://discord.com/api/webhooks/123/abc"
+        };
+
+        Assert.True(settings.IsValid);
+    }
+
+    [Fact]
+    public void Validate_rejects_invalid_discord_webhook()
+    {
+        var settings = new UserSettings
+        {
+            DiscordEnabled = true,
+            DiscordWebhookUrl = "https://example.com/not-a-webhook"
+        };
+
+        Assert.False(settings.IsValid);
+        Assert.Contains(settings.Validate(), error => error.Contains("Discord webhook", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void UserSettings_can_be_serialized_and_deserialized()
+    {
+        var settings = new UserSettings
+        {
+            TelegramEnabled = true,
+            TelegramBotToken = "123456789:AAExampleTelegramBotTokenValue123456",
+            TelegramChatId = "42",
+            NotifyOnShutdown = false
+        };
+
+        var json = JsonSerializer.Serialize(settings);
+        var restored = JsonSerializer.Deserialize<UserSettings>(json);
+
+        Assert.NotNull(restored);
+        Assert.Equal(settings.TelegramBotToken, restored.TelegramBotToken);
+        Assert.Equal(settings.TelegramChatId, restored.TelegramChatId);
+        Assert.False(restored.NotifyOnShutdown);
+        Assert.True(restored.TelegramEnabled);
+    }
+
+    [Fact]
+    public void IsEventEnabled_respects_notification_flags()
+    {
+        var settings = new UserSettings
+        {
+            NotifyOnStartup = true,
+            NotifyOnShutdown = false,
+            NotifyOnRestart = true,
+            NotifyOnUnexpectedShutdown = false
+        };
+
+        Assert.True(settings.IsEventEnabled(MachineEventType.Startup));
+        Assert.False(settings.IsEventEnabled(MachineEventType.Shutdown));
+        Assert.True(settings.IsEventEnabled(MachineEventType.Restart));
+        Assert.False(settings.IsEventEnabled(MachineEventType.UnexpectedShutdown));
+        Assert.False(settings.IsEventEnabled(MachineEventType.Unknown));
+    }
+}

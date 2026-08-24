@@ -1,4 +1,7 @@
+using AlarmProgram.Application.Abstractions;
+using AlarmProgram.Application.Alerts;
 using AlarmProgram.Application.Configuration;
+using AlarmProgram.Application.Events;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AlarmProgram.Application;
@@ -15,6 +18,11 @@ public static class DependencyInjection
 
         services.AddOptions<LoggingFileOptions>()
             .BindConfiguration(LoggingFileOptions.SectionName);
+
+        services.AddSingleton<IEventClassifier, EventClassifier>();
+        services.AddSingleton<IAlertFormatter, AlertFormatter>();
+        services.AddSingleton<AlertFilter>();
+        services.AddSingleton<AlertOrchestrator>();
 
         return services;
     }
