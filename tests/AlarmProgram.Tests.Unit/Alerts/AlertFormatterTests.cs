@@ -14,7 +14,12 @@ public class AlertFormatterTests
     [InlineData(MachineEventType.Restart, "ПК перезагрузился")]
     [InlineData(MachineEventType.UnexpectedShutdown, "Некорректное выключение ПК")]
     [InlineData(MachineEventType.UserLogon, "Вход пользователя в Windows")]
+    [InlineData(MachineEventType.UserLogoff, "Выход пользователя из Windows")]
     [InlineData(MachineEventType.Heartbeat, "Heartbeat: ПК в сети")]
+    [InlineData(MachineEventType.IpChanged, "Сменился IP-адрес")]
+    [InlineData(MachineEventType.NetworkOffline, "Сеть недоступна")]
+    [InlineData(MachineEventType.NetworkOnline, "Сеть восстановлена")]
+    [InlineData(MachineEventType.SystemResume, "ПК вышел из режима сна")]
     public void Format_uses_stable_subject_and_includes_host_and_timestamp(
         MachineEventType eventType,
         string expectedSubject)
@@ -62,6 +67,24 @@ public class AlertFormatterTests
         Assert.Equal(Environment.MachineName, alert.HostName);
         Assert.Contains($"Хост: {Environment.MachineName}", alert.Body);
         Assert.Contains("Event ID 6006", alert.Body);
+    }
+
+    [Fact]
+    public void Format_uses_display_name_and_custom_template()
+    {
+        var settings = new UserSettings
+        {
+            DisplayName = "Домашний ПК",
+            AlertBodyTemplate = "{Subject} | {DisplayName} | {Host} | {Type} | {Message}"
+        };
+
+        var alert = _formatter.Format(CreateEvent(MachineEventType.IpChanged, "old -> new"), settings);
+
+        Assert.Equal("Сменился IP-адрес", alert.Subject);
+        Assert.Equal("Домашний ПК (TEST-PC)", alert.HostName);
+        Assert.Contains("Домашний ПК", alert.Body);
+        Assert.Contains("IpChanged", alert.Body);
+        Assert.Contains("old -> new", alert.Body);
     }
 
     [Fact]

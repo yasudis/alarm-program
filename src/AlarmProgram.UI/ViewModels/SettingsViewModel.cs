@@ -28,6 +28,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveSettingsCommand))]
     [NotifyCanExecuteChangedFor(nameof(SendTestAlertCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExportSettingsCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ImportSettingsCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -61,6 +63,21 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _notifyOnUserLogon;
 
     [ObservableProperty]
+    private bool _notifyOnUserLogoff;
+
+    [ObservableProperty]
+    private bool _notifyOnIpChange;
+
+    [ObservableProperty]
+    private bool _notifyOnNetworkOffline = true;
+
+    [ObservableProperty]
+    private bool _notifyOnNetworkOnline = true;
+
+    [ObservableProperty]
+    private bool _notifyOnSystemResume;
+
+    [ObservableProperty]
     private bool _heartbeatEnabled;
 
     [ObservableProperty]
@@ -80,6 +97,12 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _minimizeToTray = true;
+
+    [ObservableProperty]
+    private string _displayName = string.Empty;
+
+    [ObservableProperty]
+    private string _alertBodyTemplate = string.Empty;
 
     [ObservableProperty]
     private string _validationMessage = string.Empty;
@@ -190,6 +213,87 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanExecuteActions))]
+    private async Task ExportSettingsAsync()
+    {
+        IsBusy = true;
+        try
+        {
+            if (!await TrySaveCurrentSettingsAsync())
+            {
+                return;
+            }
+
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "JSON (*.json)|*.json",
+                FileName = "alarm-program-settings.json",
+                AddExtension = true,
+                DefaultExt = "json"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            await _settingsStore.ExportPlainAsync(dialog.FileName);
+            SaveResultMessage = $"Настройки экспортированы: {dialog.FileName}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка экспорта настроек");
+            SaveResultMessage = "Не удалось экспортировать настройки.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExecuteActions))]
+    private async Task ImportSettingsAsync()
+    {
+        IsBusy = true;
+        try
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "JSON (*.json)|*.json",
+                CheckFileExists = true
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            await _settingsStore.ImportPlainAsync(dialog.FileName);
+            var settings = await _settingsStore.LoadAsync();
+            Apply(settings);
+            try
+            {
+                _autostartService.SetEnabled(settings.RunAtWindowsStartup);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Автозапуск не обновлен после импорта");
+            }
+
+            SaveResultMessage = "Настройки импортированы и сохранены.";
+            ValidationMessage = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка импорта настроек");
+            SaveResultMessage = "Не удалось импортировать настройки.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     private bool CanExecuteActions() => !IsBusy;
 
     private async Task<bool> TrySaveCurrentSettingsAsync()
@@ -277,13 +381,20 @@ public sealed partial class SettingsViewModel : ObservableObject
         NotifyOnRestart = NotifyOnRestart,
         NotifyOnUnexpectedShutdown = NotifyOnUnexpectedShutdown,
         NotifyOnUserLogon = NotifyOnUserLogon,
+        NotifyOnUserLogoff = NotifyOnUserLogoff,
+        NotifyOnIpChange = NotifyOnIpChange,
+        NotifyOnNetworkOffline = NotifyOnNetworkOffline,
+        NotifyOnNetworkOnline = NotifyOnNetworkOnline,
+        NotifyOnSystemResume = NotifyOnSystemResume,
         HeartbeatEnabled = HeartbeatEnabled,
         HeartbeatIntervalMinutes = HeartbeatIntervalMinutes,
         QuietHoursEnabled = QuietHoursEnabled,
         QuietHoursStart = ParseTimeOrDefault(QuietHoursStart, TimeSpan.FromHours(23)),
         QuietHoursEnd = ParseTimeOrDefault(QuietHoursEnd, TimeSpan.FromHours(7)),
         RunAtWindowsStartup = RunAtWindowsStartup,
-        MinimizeToTray = MinimizeToTray
+        MinimizeToTray = MinimizeToTray,
+        DisplayName = DisplayName.Trim(),
+        AlertBodyTemplate = string.IsNullOrWhiteSpace(AlertBodyTemplate) ? null : AlertBodyTemplate
     };
 
     private void Apply(UserSettings settings)
@@ -298,6 +409,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         NotifyOnRestart = settings.NotifyOnRestart;
         NotifyOnUnexpectedShutdown = settings.NotifyOnUnexpectedShutdown;
         NotifyOnUserLogon = settings.NotifyOnUserLogon;
+        NotifyOnUserLogoff = settings.NotifyOnUserLogoff;
+        NotifyOnIpChange = settings.NotifyOnIpChange;
+        NotifyOnNetworkOffline = settings.NotifyOnNetworkOffline;
+        NotifyOnNetworkOnline = settings.NotifyOnNetworkOnline;
+        NotifyOnSystemResume = settings.NotifyOnSystemResume;
         HeartbeatEnabled = settings.HeartbeatEnabled;
         HeartbeatIntervalMinutes = settings.HeartbeatIntervalMinutes;
         QuietHoursEnabled = settings.QuietHoursEnabled;
@@ -305,6 +421,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         QuietHoursEnd = FormatTime(settings.QuietHoursEnd);
         RunAtWindowsStartup = settings.RunAtWindowsStartup || _autostartService.IsEnabled;
         MinimizeToTray = settings.MinimizeToTray;
+        DisplayName = settings.DisplayName ?? string.Empty;
+        AlertBodyTemplate = settings.AlertBodyTemplate ?? string.Empty;
     }
 
     private static AlertMessage BuildTestAlert() => new()

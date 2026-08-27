@@ -16,7 +16,8 @@ public sealed class EventClassifier : IEventClassifier
         [6006] = MachineEventType.Shutdown,
         [6008] = MachineEventType.UnexpectedShutdown,
         [6009] = MachineEventType.Startup,
-        [7001] = MachineEventType.UserLogon
+        [7001] = MachineEventType.UserLogon,
+        [7002] = MachineEventType.UserLogoff
     };
 
     public MachineEvent? Classify(RawSystemEvent rawEvent)

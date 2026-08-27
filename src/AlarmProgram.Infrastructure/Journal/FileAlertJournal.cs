@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using AlarmProgram.Application.Abstractions;
 using AlarmProgram.Application.Configuration;
@@ -44,16 +45,7 @@ public sealed class FileAlertJournal : IAlertJournal
                 entries = entries.Take(_maxEntries).ToList();
             }
 
-            var directory = Path.GetDirectoryName(_filePath);
-            if (!string.IsNullOrEmpty(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            var json = JsonSerializer.Serialize(entries, JsonOptions);
-            var tempPath = _filePath + ".tmp";
-            await File.WriteAllTextAsync(tempPath, json, cancellationToken);
-            File.Move(tempPath, _filePath, overwrite: true);
+            await WriteAllAsync(entries, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -86,6 +78,57 @@ public sealed class FileAlertJournal : IAlertJournal
         }
     }
 
+    public async Task ExportCsvAsync(string filePath, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var entries = await ReadAllAsync(cancellationToken);
+            var directory = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            var builder = new StringBuilder();
+            builder.AppendLine("Timestamp,EventType,Status,Channel,Subject,HostName,CorrelationId,Details");
+            foreach (var entry in entries)
+            {
+                builder.Append(Escape(entry.Timestamp.ToString("O"))).Append(',');
+                builder.Append(Escape(entry.EventType.ToString())).Append(',');
+                builder.Append(Escape(entry.Status)).Append(',');
+                builder.Append(Escape(entry.Channel)).Append(',');
+                builder.Append(Escape(entry.Subject)).Append(',');
+                builder.Append(Escape(entry.HostName)).Append(',');
+                builder.Append(Escape(entry.CorrelationId)).Append(',');
+                builder.AppendLine(Escape(entry.Details));
+            }
+
+            await File.WriteAllTextAsync(filePath, builder.ToString(), Encoding.UTF8, cancellationToken);
+            _logger.LogInformation("Журнал алертов экспортирован в {Path}", filePath);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private async Task WriteAllAsync(List<AlertJournalEntry> entries, CancellationToken cancellationToken)
+    {
+        var directory = Path.GetDirectoryName(_filePath);
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        var json = JsonSerializer.Serialize(entries, JsonOptions);
+        var tempPath = _filePath + ".tmp";
+        await File.WriteAllTextAsync(tempPath, json, cancellationToken);
+        File.Move(tempPath, _filePath, overwrite: true);
+    }
+
     private async Task<List<AlertJournalEntry>> ReadAllAsync(CancellationToken cancellationToken)
     {
         if (!File.Exists(_filePath))
@@ -99,6 +142,17 @@ public sealed class FileAlertJournal : IAlertJournal
             JsonOptions,
             cancellationToken);
         return entries ?? [];
+    }
+
+    private static string Escape(string? value)
+    {
+        var text = value ?? string.Empty;
+        if (text.Contains('"') || text.Contains(',') || text.Contains('\n') || text.Contains('\r'))
+        {
+            return $"\"{text.Replace("\"", "\"\"")}\"";
+        }
+
+        return text;
     }
 
     private static string ResolveFilePath(string configuredPath)

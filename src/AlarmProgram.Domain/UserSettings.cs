@@ -27,6 +27,16 @@ public sealed class UserSettings
 
     public bool NotifyOnUserLogon { get; set; }
 
+    public bool NotifyOnUserLogoff { get; set; }
+
+    public bool NotifyOnIpChange { get; set; }
+
+    public bool NotifyOnNetworkOffline { get; set; } = true;
+
+    public bool NotifyOnNetworkOnline { get; set; } = true;
+
+    public bool NotifyOnSystemResume { get; set; }
+
     public bool HeartbeatEnabled { get; set; }
 
     public int HeartbeatIntervalMinutes { get; set; } = 60;
@@ -41,6 +51,10 @@ public sealed class UserSettings
 
     public bool MinimizeToTray { get; set; } = true;
 
+    public string DisplayName { get; set; } = string.Empty;
+
+    public string? AlertBodyTemplate { get; set; }
+
     public bool IsValid => Validate().Count == 0;
 
     public bool HasEnabledChannel => TelegramEnabled || DiscordEnabled;
@@ -52,7 +66,12 @@ public sealed class UserSettings
         MachineEventType.Restart => NotifyOnRestart,
         MachineEventType.UnexpectedShutdown => NotifyOnUnexpectedShutdown,
         MachineEventType.UserLogon => NotifyOnUserLogon,
+        MachineEventType.UserLogoff => NotifyOnUserLogoff,
         MachineEventType.Heartbeat => HeartbeatEnabled,
+        MachineEventType.IpChanged => NotifyOnIpChange,
+        MachineEventType.NetworkOffline => NotifyOnNetworkOffline,
+        MachineEventType.NetworkOnline => NotifyOnNetworkOnline,
+        MachineEventType.SystemResume => NotifyOnSystemResume,
         _ => false
     };
 
@@ -127,6 +146,16 @@ public sealed class UserSettings
             {
                 errors.Add("Некорректное время окончания тихих часов.");
             }
+        }
+
+        if (!string.IsNullOrWhiteSpace(DisplayName) && DisplayName.Trim().Length > 64)
+        {
+            errors.Add("Отображаемое имя устройства не должно превышать 64 символа.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(AlertBodyTemplate) && AlertBodyTemplate.Length > 4000)
+        {
+            errors.Add("Шаблон сообщения слишком длинный (макс. 4000 символов).");
         }
 
         return errors;

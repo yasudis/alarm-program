@@ -22,6 +22,16 @@ internal sealed class SettingsFileDto
 
     public bool NotifyOnUserLogon { get; set; }
 
+    public bool NotifyOnUserLogoff { get; set; }
+
+    public bool NotifyOnIpChange { get; set; }
+
+    public bool NotifyOnNetworkOffline { get; set; } = true;
+
+    public bool NotifyOnNetworkOnline { get; set; } = true;
+
+    public bool NotifyOnSystemResume { get; set; }
+
     public bool HeartbeatEnabled { get; set; }
 
     public int HeartbeatIntervalMinutes { get; set; } = 60;
@@ -35,4 +45,8 @@ internal sealed class SettingsFileDto
     public bool RunAtWindowsStartup { get; set; }
 
     public bool MinimizeToTray { get; set; } = true;
+
+    public string DisplayName { get; set; } = string.Empty;
+
+    public string? AlertBodyTemplate { get; set; }
 }

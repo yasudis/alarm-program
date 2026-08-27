@@ -25,6 +25,9 @@ public static class DependencyInjection
         services.AddOptions<AlertJournalOptions>()
             .BindConfiguration(AlertJournalOptions.SectionName);
 
+        services.AddOptions<AlertOutboxOptions>()
+            .BindConfiguration(AlertOutboxOptions.SectionName);
+
         services.AddSingleton<IEventClassifier, EventClassifier>();
         services.AddSingleton<IAlertFormatter, AlertFormatter>();
         services.AddSingleton<AlertFilter>();

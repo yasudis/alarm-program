@@ -16,6 +16,7 @@ public sealed class AlertOrchestrator
     private readonly IReadOnlyList<INotificationChannel> _channels;
     private readonly ISettingsStore _settingsStore;
     private readonly IAlertJournal _alertJournal;
+    private readonly IAlertOutbox _alertOutbox;
     private readonly ILogger<AlertOrchestrator> _logger;
     private readonly TimeSpan _deduplicationWindow;
     private readonly object _deduplicationLock = new();
@@ -29,6 +30,7 @@ public sealed class AlertOrchestrator
         IEnumerable<INotificationChannel> channels,
         ISettingsStore settingsStore,
         IAlertJournal alertJournal,
+        IAlertOutbox alertOutbox,
         IOptions<MonitoringOptions> monitoringOptions,
         ILogger<AlertOrchestrator> logger)
     {
@@ -39,6 +41,7 @@ public sealed class AlertOrchestrator
         _channels = channels.ToArray();
         _settingsStore = settingsStore;
         _alertJournal = alertJournal;
+        _alertOutbox = alertOutbox;
         _deduplicationWindow = ResolveDeduplicationWindow(monitoringOptions.Value.DeduplicationWindowSeconds);
         _logger = logger;
     }
@@ -105,6 +108,65 @@ public sealed class AlertOrchestrator
         await ProcessClassifiedEventAsync(machineEvent, settings, cancellationToken);
     }
 
+    public async Task FlushOutboxAsync(CancellationToken cancellationToken = default)
+    {
+        var pending = await _alertOutbox.GetPendingAsync(cancellationToken);
+        if (pending.Count == 0)
+        {
+            return;
+        }
+
+        var channelsByName = _channels.ToDictionary(item => item.Name, StringComparer.OrdinalIgnoreCase);
+        foreach (var item in pending)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!channelsByName.TryGetValue(item.ChannelName, out var channel))
+            {
+                _logger.LogWarning(
+                    "Outbox item {Id} ссылается на неизвестный канал {Channel}",
+                    item.Id,
+                    item.ChannelName);
+                await _alertOutbox.RemoveAsync(item.Id, cancellationToken);
+                continue;
+            }
+
+            try
+            {
+                await channel.SendAsync(item.Message, cancellationToken);
+                await _alertOutbox.RemoveAsync(item.Id, cancellationToken);
+                await _alertJournal.AppendAsync(
+                    new AlertJournalEntry
+                    {
+                        Timestamp = DateTimeOffset.UtcNow,
+                        EventType = item.Message.EventType,
+                        Subject = item.Message.Subject,
+                        Status = "SentFromOutbox",
+                        Channel = channel.Name,
+                        HostName = item.Message.HostName,
+                        CorrelationId = item.Message.CorrelationId
+                    },
+                    cancellationToken);
+                _logger.LogInformation(
+                    "Outbox item {Id} успешно отправлен в {Channel}",
+                    item.Id,
+                    channel.Name);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                await _alertOutbox.UpdateAttemptAsync(item.Id, ex.Message, cancellationToken);
+                _logger.LogWarning(
+                    ex,
+                    "Повторная отправка outbox item {Id} в {Channel} не удалась",
+                    item.Id,
+                    channel.Name);
+            }
+        }
+    }
+
     private async Task ProcessClassifiedEventAsync(
         MachineEvent machineEvent,
         UserSettings settings,
@@ -131,7 +193,7 @@ public sealed class AlertOrchestrator
         AlertMessage message;
         try
         {
-            message = _formatter.Format(machineEvent);
+            message = _formatter.Format(machineEvent, settings);
         }
         catch (Exception ex)
         {
@@ -191,13 +253,15 @@ public sealed class AlertOrchestrator
                     message.CorrelationId,
                     ex.GetType().Name);
 
+                await _alertOutbox.EnqueueAsync(message, channel.Name, cancellationToken);
+
                 await _alertJournal.AppendAsync(
                     new AlertJournalEntry
                     {
                         Timestamp = DateTimeOffset.UtcNow,
                         EventType = message.EventType,
                         Subject = message.Subject,
-                        Status = "Failed",
+                        Status = "Queued",
                         Channel = channel.Name,
                         HostName = message.HostName,
                         CorrelationId = message.CorrelationId,
@@ -212,7 +276,7 @@ public sealed class AlertOrchestrator
     {
         var now = DateTimeOffset.UtcNow;
         var occurredAt = machineEvent.OccurredAt.ToUniversalTime().ToString("O");
-        var key = $"{machineEvent.Type}|{machineEvent.EventId}|{machineEvent.HostName}|{machineEvent.Source}|{occurredAt}";
+        var key = $"{machineEvent.Type}|{machineEvent.EventId}|{machineEvent.HostName}|{machineEvent.Source}|{occurredAt}|{machineEvent.Message}";
 
         lock (_deduplicationLock)
         {

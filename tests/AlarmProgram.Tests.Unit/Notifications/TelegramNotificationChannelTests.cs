@@ -166,6 +166,12 @@ public class TelegramNotificationChannelTests
 
         public Task SaveAsync(UserSettings settings, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+
+        public Task ExportPlainAsync(string filePath, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task ImportPlainAsync(string filePath, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 
     private sealed class StubHandler : HttpMessageHandler

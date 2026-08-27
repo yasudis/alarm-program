@@ -9,4 +9,6 @@ public interface IAlertJournal
     Task<IReadOnlyList<AlertJournalEntry>> GetRecentAsync(
         int maxCount = 50,
         CancellationToken cancellationToken = default);
+
+    Task ExportCsvAsync(string filePath, CancellationToken cancellationToken = default);
 }
