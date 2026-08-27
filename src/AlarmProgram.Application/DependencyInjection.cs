@@ -16,6 +16,9 @@ public static class DependencyInjection
         services.AddOptions<NotificationsOptions>()
             .BindConfiguration(NotificationsOptions.SectionName);
 
+        services.AddOptions<MonitoringOptions>()
+            .BindConfiguration(MonitoringOptions.SectionName);
+
         services.AddOptions<LoggingFileOptions>()
             .BindConfiguration(LoggingFileOptions.SectionName);
 

@@ -85,6 +85,22 @@ public class JsonSettingsStoreTests
         Assert.Equal(webhook, restored.DiscordWebhookUrl);
     }
 
+    [Fact]
+    public async Task SaveAsync_throws_when_settings_are_invalid()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "AlarmProgramTests", Guid.NewGuid().ToString("N"), "settings.json");
+        var store = CreateStore(path);
+        var invalid = new UserSettings
+        {
+            TelegramEnabled = true,
+            TelegramBotToken = "bad-token-format",
+            TelegramChatId = string.Empty
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => store.SaveAsync(invalid));
+        Assert.False(File.Exists(path));
+    }
+
     private static JsonSettingsStore CreateStore(string filePath)
     {
         var options = Options.Create(new SettingsStoreOptions { FilePath = filePath });

@@ -1,9 +1,11 @@
 using AlarmProgram.Application.Abstractions;
 using AlarmProgram.Application.Alerts;
+using AlarmProgram.Application.Configuration;
 using AlarmProgram.Application.Contracts;
 using AlarmProgram.Application.Events;
 using AlarmProgram.Domain;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace AlarmProgram.Tests.Unit.Alerts;
 
@@ -127,6 +129,22 @@ public class AlertOrchestratorTests
         Assert.Equal(MachineEventType.Shutdown, channel.Sent[1].EventType);
     }
 
+    [Fact]
+    public async Task ProcessAsync_skips_duplicate_events_within_deduplication_window()
+    {
+        var duplicate = CreateRaw(6005, occurredAt: new DateTimeOffset(2026, 8, 24, 10, 0, 0, TimeSpan.Zero));
+        var channel = new CapturingChannel();
+        var orchestrator = CreateOrchestrator(
+            new FakeCollector([duplicate, duplicate]),
+            ValidTelegramSettings(),
+            channel);
+
+        await orchestrator.ProcessAsync(DateTimeOffset.UtcNow.AddHours(-1));
+
+        var sent = Assert.Single(channel.Sent);
+        Assert.Equal(MachineEventType.Startup, sent.EventType);
+    }
+
     private static AlertOrchestrator CreateOrchestrator(
         IEventCollector collector,
         UserSettings settings,
@@ -138,6 +156,7 @@ public class AlertOrchestratorTests
             new AlertFormatter(),
             [channel],
             new FakeSettingsStore(settings),
+            Options.Create(new MonitoringOptions { DeduplicationWindowSeconds = 180 }),
             NullLogger<AlertOrchestrator>.Instance);
 
     private static UserSettings ValidTelegramSettings() => new()

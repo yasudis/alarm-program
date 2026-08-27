@@ -1,7 +1,9 @@
 using AlarmProgram.Application.Abstractions;
+using AlarmProgram.Application.Configuration;
 using AlarmProgram.Application.Contracts;
 using AlarmProgram.Domain;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace AlarmProgram.Application.Alerts;
 
@@ -14,6 +16,9 @@ public sealed class AlertOrchestrator
     private readonly IReadOnlyList<INotificationChannel> _channels;
     private readonly ISettingsStore _settingsStore;
     private readonly ILogger<AlertOrchestrator> _logger;
+    private readonly TimeSpan _deduplicationWindow;
+    private readonly object _deduplicationLock = new();
+    private readonly Dictionary<string, DateTimeOffset> _seenEvents = new(StringComparer.Ordinal);
 
     public AlertOrchestrator(
         IEventCollector collector,
@@ -22,6 +27,7 @@ public sealed class AlertOrchestrator
         IAlertFormatter formatter,
         IEnumerable<INotificationChannel> channels,
         ISettingsStore settingsStore,
+        IOptions<MonitoringOptions> monitoringOptions,
         ILogger<AlertOrchestrator> logger)
     {
         _collector = collector;
@@ -30,6 +36,7 @@ public sealed class AlertOrchestrator
         _formatter = formatter;
         _channels = channels.ToArray();
         _settingsStore = settingsStore;
+        _deduplicationWindow = ResolveDeduplicationWindow(monitoringOptions.Value.DeduplicationWindowSeconds);
         _logger = logger;
     }
 
@@ -79,6 +86,15 @@ public sealed class AlertOrchestrator
                 "Событие {EventId} от {Source} не классифицировано",
                 rawEvent.EventId,
                 rawEvent.Source);
+            return;
+        }
+
+        if (IsDuplicate(machineEvent))
+        {
+            _logger.LogDebug(
+                "Событие {EventType} на {HostName} пропущено как дубликат",
+                machineEvent.Type,
+                machineEvent.HostName);
             return;
         }
 
@@ -137,5 +153,53 @@ public sealed class AlertOrchestrator
                     message.HostName);
             }
         }
+    }
+
+    private bool IsDuplicate(MachineEvent machineEvent)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var occurredAt = machineEvent.OccurredAt.ToUniversalTime().ToString("O");
+        var key = $"{machineEvent.Type}|{machineEvent.EventId}|{machineEvent.HostName}|{machineEvent.Source}|{occurredAt}";
+
+        lock (_deduplicationLock)
+        {
+            PurgeExpired(now);
+            if (_seenEvents.ContainsKey(key))
+            {
+                return true;
+            }
+
+            _seenEvents[key] = now;
+            return false;
+        }
+    }
+
+    private void PurgeExpired(DateTimeOffset now)
+    {
+        if (_seenEvents.Count == 0)
+        {
+            return;
+        }
+
+        var expireBefore = now - _deduplicationWindow;
+        var expiredKeys = _seenEvents
+            .Where(item => item.Value <= expireBefore)
+            .Select(item => item.Key)
+            .ToArray();
+
+        foreach (var key in expiredKeys)
+        {
+            _seenEvents.Remove(key);
+        }
+    }
+
+    private static TimeSpan ResolveDeduplicationWindow(int deduplicationWindowSeconds)
+    {
+        if (deduplicationWindowSeconds < 1)
+        {
+            return TimeSpan.FromSeconds(180);
+        }
+
+        return TimeSpan.FromSeconds(deduplicationWindowSeconds);
     }
 }

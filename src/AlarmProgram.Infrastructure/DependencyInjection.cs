@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddSingleton<IEventCollector, WindowsEventLogReader>();
         services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromSeconds(30) });
         services.AddSingleton<INotificationChannel, TelegramNotificationChannel>();
+        services.AddSingleton<INotificationChannel, DiscordNotificationChannel>();
 
         return services;
     }

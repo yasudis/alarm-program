@@ -1,10 +1,12 @@
 using System.Net;
 using System.Text;
 using AlarmProgram.Application.Abstractions;
+using AlarmProgram.Application.Configuration;
 using AlarmProgram.Domain;
 using AlarmProgram.Infrastructure.Notifications;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace AlarmProgram.Tests.Unit.Notifications;
 
@@ -99,6 +101,7 @@ public class TelegramNotificationChannelTests
         var channel = new TelegramNotificationChannel(
             new FakeSettingsStore(ValidSettings()),
             new HttpClient(handler),
+            Options.Create(new NotificationsOptions()),
             logger);
 
         await channel.SendAsync(CreateAlert());
@@ -107,10 +110,33 @@ public class TelegramNotificationChannelTests
         Assert.Contains(logger.Messages, log => log.Contains("***", StringComparison.Ordinal));
     }
 
-    private static TelegramNotificationChannel CreateChannel(UserSettings settings, StubHandler handler) =>
+    [Fact]
+    public async Task SendAsync_retries_on_transient_http_statuses()
+    {
+        var handler = new StubHandler();
+        handler.StatusCodes.Enqueue(HttpStatusCode.ServiceUnavailable);
+        handler.StatusCodes.Enqueue(HttpStatusCode.TooManyRequests);
+        handler.StatusCodes.Enqueue(HttpStatusCode.OK);
+        var channel = CreateChannel(ValidSettings(), handler, retryCount: 3, retryDelaySeconds: 1);
+
+        await channel.SendAsync(CreateAlert());
+
+        Assert.Equal(3, handler.SendCount);
+    }
+
+    private static TelegramNotificationChannel CreateChannel(
+        UserSettings settings,
+        StubHandler handler,
+        int retryCount = 3,
+        int retryDelaySeconds = 1) =>
         new(
             new FakeSettingsStore(settings),
             new HttpClient(handler),
+            Options.Create(new NotificationsOptions
+            {
+                DefaultRetryCount = retryCount,
+                RetryDelaySeconds = retryDelaySeconds
+            }),
             NullLogger<TelegramNotificationChannel>.Instance);
 
     private static UserSettings ValidSettings() => new()
@@ -156,6 +182,10 @@ public class TelegramNotificationChannelTests
 
         public bool ThrowOnSend { get; set; }
 
+        public int SendCount { get; private set; }
+
+        public Queue<HttpStatusCode> StatusCodes { get; } = new();
+
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
@@ -167,11 +197,14 @@ public class TelegramNotificationChannelTests
 
             LastMethod = request.Method;
             LastUri = request.RequestUri;
+            SendCount++;
             LastBody = request.Content is null
                 ? null
                 : await request.Content.ReadAsStringAsync(cancellationToken);
 
-            return new HttpResponseMessage(StatusCode)
+            var nextStatus = StatusCodes.Count > 0 ? StatusCodes.Dequeue() : StatusCode;
+
+            return new HttpResponseMessage(nextStatus)
             {
                 Content = new StringContent(ResponseBody, Encoding.UTF8, "application/json")
             };

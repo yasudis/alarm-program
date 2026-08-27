@@ -61,6 +61,13 @@ public sealed class JsonSettingsStore : ISettingsStore
     public async Task SaveAsync(UserSettings settings, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        var validationErrors = settings.Validate();
+        if (validationErrors.Count > 0)
+        {
+            var message = "Настройки не прошли валидацию: " + string.Join(" ", validationErrors);
+            _logger.LogWarning(message);
+            throw new InvalidOperationException(message);
+        }
 
         var dto = new SettingsFileDto
         {

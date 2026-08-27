@@ -1,6 +1,7 @@
 ﻿using AlarmProgram.Application.Abstractions;
 using AlarmProgram.Application.Configuration;
 using AlarmProgram.Infrastructure;
+using AlarmProgram.UI.Services;
 using AlarmProgram.UI.ViewModels;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,6 +50,8 @@ public partial class App : System.Windows.Application
             .ConfigureServices((_, services) =>
             {
                 services.AddInfrastructure();
+                services.AddHostedService<MonitoringHostedService>();
+                services.AddSingleton<SettingsViewModel>();
                 services.AddSingleton<MainViewModel>();
                 services.AddSingleton<MainWindow>();
             })
@@ -67,6 +70,8 @@ public partial class App : System.Windows.Application
             settings.TelegramEnabled,
             settings.DiscordEnabled);
 
+        var mainViewModel = _host.Services.GetRequiredService<MainViewModel>();
+        await mainViewModel.InitializeAsync();
         _host.Services.GetRequiredService<MainWindow>().Show();
 
         base.OnStartup(e);

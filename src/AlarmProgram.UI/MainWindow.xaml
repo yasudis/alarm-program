@@ -5,13 +5,14 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="{Binding ApplicationTitle}"
-        Height="320"
-        Width="560"
-        MinHeight="240"
-        MinWidth="420"
+        Height="680"
+        Width="760"
+        MinHeight="520"
+        MinWidth="620"
         WindowStartupLocation="CenterScreen">
     <Grid Margin="24">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
@@ -22,13 +23,89 @@
                    FontWeight="SemiBold" />
 
         <Border Grid.Row="1"
-                Margin="0,24,0,0"
-                Padding="16"
+                Margin="0,16,0,0"
+                Padding="14"
                 CornerRadius="8"
                 Background="#FFF5F5F5">
             <TextBlock Text="{Binding StatusMessage}"
-                       FontSize="16"
+                       FontSize="15"
                        TextWrapping="Wrap" />
+        </Border>
+
+        <Border Grid.Row="2"
+                Margin="0,16,0,0"
+                Padding="16"
+                CornerRadius="8"
+                Background="#FFFDFDFD"
+                BorderBrush="#FFE3E3E3"
+                BorderThickness="1">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock FontSize="18"
+                               FontWeight="SemiBold"
+                               Text="Настройки уведомлений" />
+
+                    <CheckBox Margin="0,16,0,0"
+                              Content="Включить Telegram"
+                              IsChecked="{Binding Settings.TelegramEnabled}" />
+                    <TextBlock Margin="0,8,0,0"
+                               Text="Telegram Bot Token" />
+                    <TextBox Text="{Binding Settings.TelegramBotToken, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Margin="0,8,0,0"
+                               Text="Telegram Chat ID" />
+                    <TextBox Text="{Binding Settings.TelegramChatId, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <CheckBox Margin="0,16,0,0"
+                              Content="Включить Discord webhook"
+                              IsChecked="{Binding Settings.DiscordEnabled}" />
+                    <TextBlock Margin="0,8,0,0"
+                               Text="Discord Webhook URL" />
+                    <TextBox Text="{Binding Settings.DiscordWebhookUrl, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Margin="0,16,0,0"
+                               FontWeight="SemiBold"
+                               Text="Типы событий" />
+                    <WrapPanel Margin="0,8,0,0">
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Startup"
+                                  IsChecked="{Binding Settings.NotifyOnStartup}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Shutdown"
+                                  IsChecked="{Binding Settings.NotifyOnShutdown}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Restart"
+                                  IsChecked="{Binding Settings.NotifyOnRestart}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Unexpected shutdown"
+                                  IsChecked="{Binding Settings.NotifyOnUnexpectedShutdown}" />
+                    </WrapPanel>
+
+                    <TextBlock Margin="0,16,0,0"
+                               Foreground="#FFB00020"
+                               TextWrapping="Wrap"
+                               Text="{Binding Settings.ValidationMessage}" />
+                    <TextBlock Margin="0,8,0,0"
+                               Foreground="#FF005A20"
+                               TextWrapping="Wrap"
+                               Text="{Binding Settings.SaveResultMessage}" />
+                    <TextBlock Margin="0,8,0,0"
+                               Foreground="#FF1A1A8A"
+                               TextWrapping="Wrap"
+                               Text="{Binding Settings.TestResultMessage}" />
+
+                    <WrapPanel Margin="0,16,0,0">
+                        <Button Width="180"
+                                Height="34"
+                                Content="Сохранить настройки"
+                                Command="{Binding Settings.SaveSettingsCommand}" />
+                        <Button Width="180"
+                                Height="34"
+                                Margin="12,0,0,0"
+                                Content="Тестовая отправка"
+                                Command="{Binding Settings.SendTestAlertCommand}" />
+                    </WrapPanel>
+                </StackPanel>
+            </ScrollViewer>
         </Border>
     </Grid>
 </Window>
