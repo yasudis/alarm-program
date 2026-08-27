@@ -38,6 +38,35 @@ public class FileAlertJournalTests
         Assert.Equal("abc", recent[0].CorrelationId);
     }
 
+    [Fact]
+    public async Task ExportCsvAsync_writes_header_and_rows()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "AlarmProgramTests", Guid.NewGuid().ToString("N"));
+        var journalPath = Path.Combine(dir, "journal.json");
+        var csvPath = Path.Combine(dir, "export.csv");
+        var journal = CreateJournal(journalPath);
+
+        await journal.AppendAsync(new AlertJournalEntry
+        {
+            Timestamp = DateTimeOffset.Parse("2026-08-27T12:00:00Z"),
+            EventType = MachineEventType.IpChanged,
+            Subject = "Сменился IP-адрес",
+            Status = "Sent",
+            Channel = "Telegram",
+            HostName = "HOME-PC",
+            CorrelationId = "cid1",
+            Details = "note,with,comma"
+        });
+
+        await journal.ExportCsvAsync(csvPath);
+        var csv = await File.ReadAllTextAsync(csvPath);
+
+        Assert.Contains("Timestamp,EventType,Status,Channel,Subject,HostName,CorrelationId,Details", csv);
+        Assert.Contains("IpChanged", csv);
+        Assert.Contains("Telegram", csv);
+        Assert.Contains("\"note,with,comma\"", csv);
+    }
+
     private static FileAlertJournal CreateJournal(string path) =>
         new(
             Options.Create(new AlertJournalOptions { FilePath = path, MaxEntries = 20 }),

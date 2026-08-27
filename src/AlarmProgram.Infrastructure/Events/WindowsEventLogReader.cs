@@ -18,7 +18,8 @@ public sealed class WindowsEventLogReader : IEventCollector
         6006,
         6008,
         6009,
-        7001
+        7001,
+        7002
     ];
 
     private const int MaxEvents = 500;

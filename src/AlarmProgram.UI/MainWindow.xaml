@@ -5,10 +5,10 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="{Binding ApplicationTitle}"
-        Height="820"
-        Width="820"
-        MinHeight="620"
-        MinWidth="700"
+        Height="900"
+        Width="860"
+        MinHeight="680"
+        MinWidth="720"
         WindowStartupLocation="CenterScreen"
         StateChanged="OnWindowStateChanged"
         Closing="OnWindowClosing">
@@ -67,6 +67,9 @@
                                FontWeight="SemiBold"
                                Text="Настройки уведомлений" />
 
+                    <TextBlock Margin="0,12,0,0" Text="Отображаемое имя устройства" />
+                    <TextBox Text="{Binding Settings.DisplayName, UpdateSourceTrigger=PropertyChanged}" />
+
                     <CheckBox Margin="0,16,0,0"
                               Content="Включить Telegram"
                               IsChecked="{Binding Settings.TelegramEnabled}" />
@@ -103,6 +106,21 @@
                         <CheckBox Margin="0,0,16,8"
                                   Content="User logon"
                                   IsChecked="{Binding Settings.NotifyOnUserLogon}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="User logoff"
+                                  IsChecked="{Binding Settings.NotifyOnUserLogoff}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="IP change"
+                                  IsChecked="{Binding Settings.NotifyOnIpChange}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Network offline"
+                                  IsChecked="{Binding Settings.NotifyOnNetworkOffline}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Network online"
+                                  IsChecked="{Binding Settings.NotifyOnNetworkOnline}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="System resume"
+                                  IsChecked="{Binding Settings.NotifyOnSystemResume}" />
                     </WrapPanel>
 
                     <TextBlock Margin="0,8,0,0"
@@ -138,6 +156,21 @@
                                  Text="{Binding Settings.QuietHoursEnd, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
 
+                    <TextBlock Margin="0,12,0,0"
+                               FontWeight="SemiBold"
+                               Text="Шаблон сообщения (опционально)" />
+                    <TextBlock Margin="0,4,0,0"
+                               Foreground="#FF666666"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Text="Плейсхолдеры: {Subject} {Host} {DisplayName} {MachineName} {Time} {Type} {Source} {EventId} {Message} {CorrelationId}" />
+                    <TextBox Margin="0,8,0,0"
+                             Height="72"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"
+                             Text="{Binding Settings.AlertBodyTemplate, UpdateSourceTrigger=PropertyChanged}" />
+
                     <TextBlock Margin="0,16,0,0"
                                Foreground="#FFB00020"
                                TextWrapping="Wrap"
@@ -161,6 +194,16 @@
                                 Margin="12,0,0,0"
                                 Content="Тестовая отправка"
                                 Command="{Binding Settings.SendTestAlertCommand}" />
+                        <Button Width="180"
+                                Height="34"
+                                Margin="12,0,0,0"
+                                Content="Экспорт настроек"
+                                Command="{Binding Settings.ExportSettingsCommand}" />
+                        <Button Width="180"
+                                Height="34"
+                                Margin="12,0,0,0"
+                                Content="Импорт настроек"
+                                Command="{Binding Settings.ImportSettingsCommand}" />
                     </WrapPanel>
                 </StackPanel>
             </ScrollViewer>
@@ -175,11 +218,17 @@
                 BorderThickness="1">
             <DockPanel>
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-                    <Button DockPanel.Dock="Right"
-                            Width="120"
-                            Height="28"
-                            Content="Обновить"
-                            Command="{Binding RefreshJournalCommand}" />
+                    <WrapPanel DockPanel.Dock="Right">
+                        <Button Width="120"
+                                Height="28"
+                                Content="Обновить"
+                                Command="{Binding RefreshJournalCommand}" />
+                        <Button Width="140"
+                                Height="28"
+                                Margin="8,0,0,0"
+                                Content="Экспорт CSV"
+                                Command="{Binding ExportJournalCommand}" />
+                    </WrapPanel>
                     <TextBlock FontSize="16"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center"

@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Windows;
 using AlarmProgram.Application.Abstractions;
 using AlarmProgram.Application.Configuration;
 using AlarmProgram.Domain;
@@ -88,6 +87,35 @@ public sealed partial class MainViewModel : ObservableObject
         {
             _logger.LogError(ex, "Не удалось открыть каталог логов");
             StatusMessage = "Не удалось открыть каталог логов.";
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportJournalAsync()
+    {
+        try
+        {
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "CSV (*.csv)|*.csv",
+                FileName = $"alarm-journal-{DateTime.Now:yyyyMMdd-HHmmss}.csv",
+                AddExtension = true,
+                DefaultExt = "csv"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            await _alertJournal.ExportCsvAsync(dialog.FileName);
+            StatusMessage = $"Журнал экспортирован: {dialog.FileName}";
+            await RefreshJournalAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Не удалось экспортировать журнал алертов");
+            StatusMessage = "Не удалось экспортировать журнал.";
         }
     }
 

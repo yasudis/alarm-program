@@ -145,6 +145,29 @@ public class AlertOrchestratorTests
         Assert.Equal(MachineEventType.Startup, sent.EventType);
     }
 
+    [Fact]
+    public async Task ProcessAsync_queues_failed_sends_into_outbox()
+    {
+        var outbox = new FakeAlertOutbox();
+        var orchestrator = new AlertOrchestrator(
+            new FakeCollector([CreateRaw(13)]),
+            new EventClassifier(),
+            new AlertFilter(),
+            new AlertFormatter(),
+            [new ThrowingChannel()],
+            new FakeSettingsStore(ValidTelegramSettings()),
+            new FakeAlertJournal(),
+            outbox,
+            Options.Create(new MonitoringOptions { DeduplicationWindowSeconds = 180 }),
+            NullLogger<AlertOrchestrator>.Instance);
+
+        await orchestrator.ProcessAsync(DateTimeOffset.UtcNow.AddHours(-1));
+
+        var item = Assert.Single(outbox.Items);
+        Assert.Equal("Telegram", item.Channel);
+        Assert.Equal(MachineEventType.Shutdown, item.Message.EventType);
+    }
+
     private static AlertOrchestrator CreateOrchestrator(
         IEventCollector collector,
         UserSettings settings,
@@ -157,6 +180,7 @@ public class AlertOrchestratorTests
             [channel],
             new FakeSettingsStore(settings),
             new FakeAlertJournal(),
+            new FakeAlertOutbox(),
             Options.Create(new MonitoringOptions { DeduplicationWindowSeconds = 180 }),
             NullLogger<AlertOrchestrator>.Instance);
 
@@ -202,6 +226,12 @@ public class AlertOrchestratorTests
 
         public Task SaveAsync(UserSettings settings, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+
+        public Task ExportPlainAsync(string filePath, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task ImportPlainAsync(string filePath, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 
     private sealed class FakeAlertJournal : IAlertJournal
@@ -213,6 +243,29 @@ public class AlertOrchestratorTests
             int maxCount = 50,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<AlertJournalEntry>>([]);
+
+        public Task ExportCsvAsync(string filePath, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+    }
+
+    private sealed class FakeAlertOutbox : IAlertOutbox
+    {
+        public List<(AlertMessage Message, string Channel)> Items { get; } = [];
+
+        public Task EnqueueAsync(AlertMessage message, string channelName, CancellationToken cancellationToken = default)
+        {
+            Items.Add((message, channelName));
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<OutboxItem>> GetPendingAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<OutboxItem>>([]);
+
+        public Task RemoveAsync(string id, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task UpdateAttemptAsync(string id, string? error, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 
     private sealed class CapturingChannel : INotificationChannel

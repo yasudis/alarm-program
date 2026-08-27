@@ -65,6 +65,35 @@ public class JsonSettingsStoreTests
         Assert.Equal(TimeSpan.FromHours(6), restored.QuietHoursEnd);
         Assert.True(restored.RunAtWindowsStartup);
         Assert.False(restored.MinimizeToTray);
+        Assert.Equal(string.Empty, restored.DisplayName);
+    }
+
+    [Fact]
+    public async Task ExportPlainAsync_then_ImportPlainAsync_roundtrips_display_name_and_template()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "AlarmProgramTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var store = CreateStore(Path.Combine(dir, "settings.json"));
+        var exportPath = Path.Combine(dir, "backup.json");
+
+        await store.SaveAsync(new UserSettings
+        {
+            TelegramEnabled = true,
+            TelegramBotToken = "123456789:AAExampleTelegramBotTokenValue123456",
+            TelegramChatId = "777",
+            DisplayName = "Workstation",
+            AlertBodyTemplate = "{Subject} / {Time}",
+            NotifyOnIpChange = true
+        });
+
+        await store.ExportPlainAsync(exportPath);
+        var other = CreateStore(Path.Combine(dir, "other.json"));
+        await other.ImportPlainAsync(exportPath);
+        var restored = await other.LoadAsync();
+
+        Assert.Equal("Workstation", restored.DisplayName);
+        Assert.Equal("{Subject} / {Time}", restored.AlertBodyTemplate);
+        Assert.True(restored.NotifyOnIpChange);
     }
 
     [Fact]

@@ -132,4 +132,23 @@ public class UserSettingsTests
 
         Assert.Contains(settings.Validate(), error => error.Contains("heartbeat", StringComparison.OrdinalIgnoreCase));
     }
+
+    [Fact]
+    public void IsEventEnabled_covers_network_and_resume_flags()
+    {
+        var settings = new UserSettings
+        {
+            NotifyOnIpChange = true,
+            NotifyOnNetworkOffline = false,
+            NotifyOnNetworkOnline = true,
+            NotifyOnSystemResume = true,
+            NotifyOnUserLogoff = true
+        };
+
+        Assert.True(settings.IsEventEnabled(MachineEventType.IpChanged));
+        Assert.False(settings.IsEventEnabled(MachineEventType.NetworkOffline));
+        Assert.True(settings.IsEventEnabled(MachineEventType.NetworkOnline));
+        Assert.True(settings.IsEventEnabled(MachineEventType.SystemResume));
+        Assert.True(settings.IsEventEnabled(MachineEventType.UserLogoff));
+    }
 }

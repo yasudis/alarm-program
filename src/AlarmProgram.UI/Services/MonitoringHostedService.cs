@@ -14,6 +14,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
     private readonly IEventCollector _collector;
     private readonly IEventClassifier _classifier;
     private readonly ISettingsStore _settingsStore;
+    private readonly INetworkMonitor _networkMonitor;
+    private readonly IPowerEventMonitor _powerEventMonitor;
     private readonly MonitoringOptions _monitoringOptions;
     private readonly ILogger<MonitoringHostedService> _logger;
     private readonly object _stateLock = new();
@@ -26,6 +28,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         IEventCollector collector,
         IEventClassifier classifier,
         ISettingsStore settingsStore,
+        INetworkMonitor networkMonitor,
+        IPowerEventMonitor powerEventMonitor,
         IOptions<MonitoringOptions> monitoringOptions,
         ILogger<MonitoringHostedService> logger)
     {
@@ -33,6 +37,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _collector = collector;
         _classifier = classifier;
         _settingsStore = settingsStore;
+        _networkMonitor = networkMonitor;
+        _powerEventMonitor = powerEventMonitor;
         _monitoringOptions = monitoringOptions.Value;
         _logger = logger;
     }
@@ -107,6 +113,11 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         var startupAt = DateTimeOffset.UtcNow;
         var since = startupAt - ResolveInitialLookback(_monitoringOptions.InitialLookbackMinutes);
 
+        _networkMonitor.NetworkEventDetected += OnNetworkEventDetected;
+        _powerEventMonitor.PowerEventDetected += OnPowerEventDetected;
+        _networkMonitor.Start();
+        _powerEventMonitor.Start();
+
         SetRunning(true);
         await TryRecoverPreviousShutdownAsync(startupAt, stoppingToken);
         _logger.LogInformation(
@@ -123,6 +134,7 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
                     await _orchestrator.ProcessAsync(since, stoppingToken);
                     since = DateTimeOffset.UtcNow - pollInterval;
                     await TrySendHeartbeatAsync(stoppingToken);
+                    await _orchestrator.FlushOutboxAsync(stoppingToken);
                 }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -144,8 +156,57 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
             }
         }
 
+        _networkMonitor.NetworkEventDetected -= OnNetworkEventDetected;
+        _powerEventMonitor.PowerEventDetected -= OnPowerEventDetected;
         SetRunning(false);
         _logger.LogInformation("Фоновый мониторинг событий остановлен");
+    }
+
+    public override void Dispose()
+    {
+        _networkMonitor.Dispose();
+        _powerEventMonitor.Dispose();
+        base.Dispose();
+    }
+
+    private void OnNetworkEventDetected(object? sender, MachineEvent machineEvent)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (IsPaused)
+                {
+                    return;
+                }
+
+                await _orchestrator.ProcessMachineEventAsync(machineEvent);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка обработки сетевого события {EventType}", machineEvent.Type);
+            }
+        });
+    }
+
+    private void OnPowerEventDetected(object? sender, MachineEvent machineEvent)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (IsPaused)
+                {
+                    return;
+                }
+
+                await _orchestrator.ProcessMachineEventAsync(machineEvent);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка обработки события питания {EventType}", machineEvent.Type);
+            }
+        });
     }
 
     private async Task TrySendHeartbeatAsync(CancellationToken cancellationToken)
@@ -179,7 +240,7 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
             Source = "AlarmProgram",
             EventId = null,
             HostName = Environment.MachineName,
-            Message = $"Периодический heartbeat каждые {intervalMinutes} мин."
+            Message = $"Периодический heartbeat каждые {intervalMinutes} мин. IP={_networkMonitor.CurrentPrimaryIp ?? "-"}"
         };
 
         await _orchestrator.ProcessMachineEventAsync(heartbeat, settings, cancellationToken);
