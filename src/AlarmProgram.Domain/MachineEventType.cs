@@ -6,5 +6,7 @@ public enum MachineEventType
     Startup = 1,
     Shutdown = 2,
     Restart = 3,
-    UnexpectedShutdown = 4
+    UnexpectedShutdown = 4,
+    UserLogon = 5,
+    Heartbeat = 6
 }

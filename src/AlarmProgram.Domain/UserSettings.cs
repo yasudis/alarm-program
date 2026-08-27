@@ -25,6 +25,22 @@ public sealed class UserSettings
 
     public bool NotifyOnUnexpectedShutdown { get; set; } = true;
 
+    public bool NotifyOnUserLogon { get; set; }
+
+    public bool HeartbeatEnabled { get; set; }
+
+    public int HeartbeatIntervalMinutes { get; set; } = 60;
+
+    public bool QuietHoursEnabled { get; set; }
+
+    public TimeSpan QuietHoursStart { get; set; } = TimeSpan.FromHours(23);
+
+    public TimeSpan QuietHoursEnd { get; set; } = TimeSpan.FromHours(7);
+
+    public bool RunAtWindowsStartup { get; set; }
+
+    public bool MinimizeToTray { get; set; } = true;
+
     public bool IsValid => Validate().Count == 0;
 
     public bool HasEnabledChannel => TelegramEnabled || DiscordEnabled;
@@ -35,8 +51,32 @@ public sealed class UserSettings
         MachineEventType.Shutdown => NotifyOnShutdown,
         MachineEventType.Restart => NotifyOnRestart,
         MachineEventType.UnexpectedShutdown => NotifyOnUnexpectedShutdown,
+        MachineEventType.UserLogon => NotifyOnUserLogon,
+        MachineEventType.Heartbeat => HeartbeatEnabled,
         _ => false
     };
+
+    public bool IsWithinQuietHours(DateTimeOffset timestamp)
+    {
+        if (!QuietHoursEnabled)
+        {
+            return false;
+        }
+
+        var localTime = timestamp.ToLocalTime().TimeOfDay;
+        if (QuietHoursStart == QuietHoursEnd)
+        {
+            return true;
+        }
+
+        if (QuietHoursStart < QuietHoursEnd)
+        {
+            return localTime >= QuietHoursStart && localTime < QuietHoursEnd;
+        }
+
+        // Overnight window, e.g. 23:00 -> 07:00
+        return localTime >= QuietHoursStart || localTime < QuietHoursEnd;
+    }
 
     public IReadOnlyList<string> Validate()
     {
@@ -68,6 +108,24 @@ public sealed class UserSettings
             else if (!IsValidDiscordWebhook(DiscordWebhookUrl))
             {
                 errors.Add("Некорректный формат Discord webhook URL.");
+            }
+        }
+
+        if (HeartbeatEnabled && (HeartbeatIntervalMinutes < 5 || HeartbeatIntervalMinutes > 1440))
+        {
+            errors.Add("Интервал heartbeat должен быть от 5 до 1440 минут.");
+        }
+
+        if (QuietHoursEnabled)
+        {
+            if (QuietHoursStart < TimeSpan.Zero || QuietHoursStart >= TimeSpan.FromDays(1))
+            {
+                errors.Add("Некорректное время начала тихих часов.");
+            }
+
+            if (QuietHoursEnd < TimeSpan.Zero || QuietHoursEnd >= TimeSpan.FromDays(1))
+            {
+                errors.Add("Некорректное время окончания тихих часов.");
             }
         }
 

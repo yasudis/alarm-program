@@ -9,15 +9,18 @@ namespace AlarmProgram.UI.ViewModels;
 public sealed partial class SettingsViewModel : ObservableObject
 {
     private readonly ISettingsStore _settingsStore;
+    private readonly IAutostartService _autostartService;
     private readonly IReadOnlyList<INotificationChannel> _channels;
     private readonly ILogger<SettingsViewModel> _logger;
 
     public SettingsViewModel(
         ISettingsStore settingsStore,
+        IAutostartService autostartService,
         IEnumerable<INotificationChannel> channels,
         ILogger<SettingsViewModel> logger)
     {
         _settingsStore = settingsStore;
+        _autostartService = autostartService;
         _channels = channels.ToArray();
         _logger = logger;
     }
@@ -53,6 +56,30 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _notifyOnUnexpectedShutdown = true;
+
+    [ObservableProperty]
+    private bool _notifyOnUserLogon;
+
+    [ObservableProperty]
+    private bool _heartbeatEnabled;
+
+    [ObservableProperty]
+    private int _heartbeatIntervalMinutes = 60;
+
+    [ObservableProperty]
+    private bool _quietHoursEnabled;
+
+    [ObservableProperty]
+    private string _quietHoursStart = "23:00";
+
+    [ObservableProperty]
+    private string _quietHoursEnd = "07:00";
+
+    [ObservableProperty]
+    private bool _runAtWindowsStartup;
+
+    [ObservableProperty]
+    private bool _minimizeToTray = true;
 
     [ObservableProperty]
     private string _validationMessage = string.Empty;
@@ -181,6 +208,17 @@ public sealed partial class SettingsViewModel : ObservableObject
         try
         {
             await _settingsStore.SaveAsync(settings);
+            try
+            {
+                _autostartService.SetEnabled(settings.RunAtWindowsStartup);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Не удалось обновить автозапуск Windows");
+                SaveResultMessage = "Настройки сохранены, но автозапуск не обновлен. См. логи.";
+                return true;
+            }
+
             return true;
         }
         catch (Exception ex)
@@ -215,7 +253,11 @@ public sealed partial class SettingsViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ошибка тестовой отправки в канал {Channel}", channel.Name);
+                _logger.LogError(
+                    ex,
+                    "Ошибка тестовой отправки в канал {Channel}. CorrelationId={CorrelationId}",
+                    channel.Name,
+                    message.CorrelationId);
                 results.Add(NotificationDispatchResult.Failed(channel.Name, ex.Message));
             }
         }
@@ -233,7 +275,15 @@ public sealed partial class SettingsViewModel : ObservableObject
         NotifyOnStartup = NotifyOnStartup,
         NotifyOnShutdown = NotifyOnShutdown,
         NotifyOnRestart = NotifyOnRestart,
-        NotifyOnUnexpectedShutdown = NotifyOnUnexpectedShutdown
+        NotifyOnUnexpectedShutdown = NotifyOnUnexpectedShutdown,
+        NotifyOnUserLogon = NotifyOnUserLogon,
+        HeartbeatEnabled = HeartbeatEnabled,
+        HeartbeatIntervalMinutes = HeartbeatIntervalMinutes,
+        QuietHoursEnabled = QuietHoursEnabled,
+        QuietHoursStart = ParseTimeOrDefault(QuietHoursStart, TimeSpan.FromHours(23)),
+        QuietHoursEnd = ParseTimeOrDefault(QuietHoursEnd, TimeSpan.FromHours(7)),
+        RunAtWindowsStartup = RunAtWindowsStartup,
+        MinimizeToTray = MinimizeToTray
     };
 
     private void Apply(UserSettings settings)
@@ -247,6 +297,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         NotifyOnShutdown = settings.NotifyOnShutdown;
         NotifyOnRestart = settings.NotifyOnRestart;
         NotifyOnUnexpectedShutdown = settings.NotifyOnUnexpectedShutdown;
+        NotifyOnUserLogon = settings.NotifyOnUserLogon;
+        HeartbeatEnabled = settings.HeartbeatEnabled;
+        HeartbeatIntervalMinutes = settings.HeartbeatIntervalMinutes;
+        QuietHoursEnabled = settings.QuietHoursEnabled;
+        QuietHoursStart = FormatTime(settings.QuietHoursStart);
+        QuietHoursEnd = FormatTime(settings.QuietHoursEnd);
+        RunAtWindowsStartup = settings.RunAtWindowsStartup || _autostartService.IsEnabled;
+        MinimizeToTray = settings.MinimizeToTray;
     }
 
     private static AlertMessage BuildTestAlert() => new()
@@ -258,6 +316,17 @@ public sealed partial class SettingsViewModel : ObservableObject
             + $"Хост: {Environment.MachineName}" + Environment.NewLine
             + $"Время: {DateTimeOffset.UtcNow:yyyy-MM-dd HH:mm:ss} UTC",
         CreatedAt = DateTimeOffset.UtcNow,
-        HostName = Environment.MachineName
+        HostName = Environment.MachineName,
+        CorrelationId = Guid.NewGuid().ToString("N")
     };
+
+    private static TimeSpan ParseTimeOrDefault(string value, TimeSpan fallback) =>
+        TimeSpan.TryParse(value, out var parsed)
+        && parsed >= TimeSpan.Zero
+        && parsed < TimeSpan.FromDays(1)
+            ? parsed
+            : fallback;
+
+    private static string FormatTime(TimeSpan value) =>
+        $"{(int)value.TotalHours:00}:{value.Minutes:00}";
 }

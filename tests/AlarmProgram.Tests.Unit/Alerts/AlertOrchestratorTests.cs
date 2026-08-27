@@ -156,6 +156,7 @@ public class AlertOrchestratorTests
             new AlertFormatter(),
             [channel],
             new FakeSettingsStore(settings),
+            new FakeAlertJournal(),
             Options.Create(new MonitoringOptions { DeduplicationWindowSeconds = 180 }),
             NullLogger<AlertOrchestrator>.Instance);
 
@@ -201,6 +202,17 @@ public class AlertOrchestratorTests
 
         public Task SaveAsync(UserSettings settings, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+    }
+
+    private sealed class FakeAlertJournal : IAlertJournal
+    {
+        public Task AppendAsync(AlertJournalEntry entry, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task<IReadOnlyList<AlertJournalEntry>> GetRecentAsync(
+            int maxCount = 50,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<AlertJournalEntry>>([]);
     }
 
     private sealed class CapturingChannel : INotificationChannel

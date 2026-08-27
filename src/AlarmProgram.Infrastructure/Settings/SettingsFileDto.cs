@@ -19,4 +19,20 @@ internal sealed class SettingsFileDto
     public bool NotifyOnRestart { get; set; } = true;
 
     public bool NotifyOnUnexpectedShutdown { get; set; } = true;
+
+    public bool NotifyOnUserLogon { get; set; }
+
+    public bool HeartbeatEnabled { get; set; }
+
+    public int HeartbeatIntervalMinutes { get; set; } = 60;
+
+    public bool QuietHoursEnabled { get; set; }
+
+    public string QuietHoursStart { get; set; } = "23:00";
+
+    public string QuietHoursEnd { get; set; } = "07:00";
+
+    public bool RunAtWindowsStartup { get; set; }
+
+    public bool MinimizeToTray { get; set; } = true;
 }

@@ -70,19 +70,21 @@ public sealed class DiscordNotificationChannel : INotificationChannel, ITestable
             if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation(
-                    "Discord webhook выполнен: тип {EventType}, хост {HostName}",
+                    "Discord webhook выполнен: тип {EventType}, хост {HostName}, CorrelationId={CorrelationId}",
                     message.EventType,
-                    message.HostName);
+                    message.HostName,
+                    message.CorrelationId);
                 return NotificationDispatchResult.Success(ChannelName);
             }
 
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             var error = $"HTTP {(int)response.StatusCode}: {Truncate(body)}";
             _logger.LogWarning(
-                "Discord webhook не удался: {Error}, тип {EventType}, хост {HostName}",
+                "Discord webhook не удался: {Error}, тип {EventType}, хост {HostName}, CorrelationId={CorrelationId}",
                 error,
                 message.EventType,
-                message.HostName);
+                message.HostName,
+                message.CorrelationId);
             return NotificationDispatchResult.Failed(ChannelName, error);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -94,9 +96,10 @@ public sealed class DiscordNotificationChannel : INotificationChannel, ITestable
             var error = $"{ex.GetType().Name}: {ex.Message}";
             _logger.LogError(
                 ex,
-                "Ошибка отправки в Discord, тип {EventType}, хост {HostName}: {Error}",
+                "Ошибка отправки в Discord, тип {EventType}, хост {HostName}, CorrelationId={CorrelationId}: {Error}",
                 message.EventType,
                 message.HostName,
+                message.CorrelationId,
                 error);
             return NotificationDispatchResult.Failed(ChannelName, error);
         }
