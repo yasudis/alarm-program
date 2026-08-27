@@ -20,7 +20,10 @@ public class OptionsBindingTests
                 ["Monitoring:PollIntervalSeconds"] = "45",
                 ["Monitoring:InitialLookbackMinutes"] = "15",
                 ["Monitoring:RecoveryLookbackHours"] = "36",
-                ["Monitoring:DeduplicationWindowSeconds"] = "240"
+                ["Monitoring:DeduplicationWindowSeconds"] = "240",
+                ["Monitoring:DefaultHeartbeatIntervalMinutes"] = "90",
+                ["AlertJournal:FilePath"] = "%AppData%/AlarmProgram/alert-journal.json",
+                ["AlertJournal:MaxEntries"] = "50"
             })
             .Build();
 
@@ -29,12 +32,14 @@ public class OptionsBindingTests
         services.AddOptions<AppOptions>().BindConfiguration(AppOptions.SectionName);
         services.AddOptions<NotificationsOptions>().BindConfiguration(NotificationsOptions.SectionName);
         services.AddOptions<MonitoringOptions>().BindConfiguration(MonitoringOptions.SectionName);
+        services.AddOptions<AlertJournalOptions>().BindConfiguration(AlertJournalOptions.SectionName);
 
         using var provider = services.BuildServiceProvider();
 
         var appOptions = provider.GetRequiredService<IOptions<AppOptions>>().Value;
         var notificationsOptions = provider.GetRequiredService<IOptions<NotificationsOptions>>().Value;
         var monitoringOptions = provider.GetRequiredService<IOptions<MonitoringOptions>>().Value;
+        var journalOptions = provider.GetRequiredService<IOptions<AlertJournalOptions>>().Value;
 
         Assert.Equal("Alarm Program Test", appOptions.ApplicationName);
         Assert.Equal("Development", appOptions.Environment);
@@ -44,5 +49,7 @@ public class OptionsBindingTests
         Assert.Equal(15, monitoringOptions.InitialLookbackMinutes);
         Assert.Equal(36, monitoringOptions.RecoveryLookbackHours);
         Assert.Equal(240, monitoringOptions.DeduplicationWindowSeconds);
+        Assert.Equal(90, monitoringOptions.DefaultHeartbeatIntervalMinutes);
+        Assert.Equal(50, journalOptions.MaxEntries);
     }
 }

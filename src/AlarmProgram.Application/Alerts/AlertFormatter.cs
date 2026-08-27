@@ -15,13 +15,15 @@ public sealed class AlertFormatter : IAlertFormatter
         var timestamp = machineEvent.OccurredAt.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss") + " UTC";
         var subject = SubjectFor(machineEvent.Type);
         var eventId = machineEvent.EventId?.ToString() ?? "-";
+        var correlationId = Guid.NewGuid().ToString("N");
 
         var body =
             $"{subject}{Environment.NewLine}" +
             $"Хост: {hostName}{Environment.NewLine}" +
             $"Время: {timestamp}{Environment.NewLine}" +
             $"Тип: {machineEvent.Type}{Environment.NewLine}" +
-            $"Источник: {machineEvent.Source} (Event ID {eventId})";
+            $"Источник: {machineEvent.Source} (Event ID {eventId}){Environment.NewLine}" +
+            $"CorrelationId: {correlationId}";
 
         if (!string.IsNullOrWhiteSpace(machineEvent.Message))
         {
@@ -34,7 +36,8 @@ public sealed class AlertFormatter : IAlertFormatter
             Subject = subject,
             Body = body,
             CreatedAt = DateTimeOffset.UtcNow,
-            HostName = hostName
+            HostName = hostName,
+            CorrelationId = correlationId
         };
     }
 
@@ -44,6 +47,8 @@ public sealed class AlertFormatter : IAlertFormatter
         MachineEventType.Shutdown => "ПК выключился",
         MachineEventType.Restart => "ПК перезагрузился",
         MachineEventType.UnexpectedShutdown => "Некорректное выключение ПК",
+        MachineEventType.UserLogon => "Вход пользователя в Windows",
+        MachineEventType.Heartbeat => "Heartbeat: ПК в сети",
         _ => "Событие ПК"
     };
 }

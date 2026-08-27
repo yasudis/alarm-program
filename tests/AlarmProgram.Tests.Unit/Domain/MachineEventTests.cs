@@ -9,6 +9,8 @@ public class MachineEventTests
     [InlineData(MachineEventType.Shutdown)]
     [InlineData(MachineEventType.Restart)]
     [InlineData(MachineEventType.UnexpectedShutdown)]
+    [InlineData(MachineEventType.UserLogon)]
+    [InlineData(MachineEventType.Heartbeat)]
     public void MachineEvent_supports_core_event_types(MachineEventType eventType)
     {
         var machineEvent = new MachineEvent

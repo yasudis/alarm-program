@@ -11,4 +11,6 @@ public sealed class MonitoringOptions
     public int RecoveryLookbackHours { get; set; } = 24;
 
     public int DeduplicationWindowSeconds { get; set; } = 180;
+
+    public int DefaultHeartbeatIntervalMinutes { get; set; } = 60;
 }

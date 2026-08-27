@@ -62,6 +62,30 @@ public class AlertFilterTests
     }
 
     [Fact]
+    public void ShouldNotify_is_false_during_quiet_hours_for_non_critical_events()
+    {
+        var settings = ValidTelegramSettings();
+        settings.QuietHoursEnabled = true;
+        settings.QuietHoursStart = TimeSpan.FromHours(1);
+        settings.QuietHoursEnd = TimeSpan.FromHours(1);
+
+        var machineEvent = CreateEvent(MachineEventType.Startup);
+        Assert.True(settings.IsWithinQuietHours(machineEvent.OccurredAt));
+        Assert.False(_filter.ShouldNotify(machineEvent, settings));
+    }
+
+    [Fact]
+    public void ShouldNotify_allows_unexpected_shutdown_during_quiet_hours()
+    {
+        var settings = ValidTelegramSettings();
+        settings.QuietHoursEnabled = true;
+        settings.QuietHoursStart = TimeSpan.FromHours(1);
+        settings.QuietHoursEnd = TimeSpan.FromHours(1);
+
+        Assert.True(_filter.ShouldNotify(CreateEvent(MachineEventType.UnexpectedShutdown), settings));
+    }
+
+    [Fact]
     public void ShouldNotify_is_false_for_unknown_event_type()
     {
         Assert.False(_filter.ShouldNotify(CreateEvent(MachineEventType.Unknown), ValidTelegramSettings()));

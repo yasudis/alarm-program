@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace AlarmProgram.UI.Services;
 
-public sealed class MonitoringHostedService : BackgroundService
+public sealed class MonitoringHostedService : BackgroundService, IMonitoringController
 {
     private readonly AlertOrchestrator _orchestrator;
     private readonly IEventCollector _collector;
@@ -16,6 +16,10 @@ public sealed class MonitoringHostedService : BackgroundService
     private readonly ISettingsStore _settingsStore;
     private readonly MonitoringOptions _monitoringOptions;
     private readonly ILogger<MonitoringHostedService> _logger;
+    private readonly object _stateLock = new();
+    private bool _isPaused;
+    private bool _isRunning;
+    private DateTimeOffset? _lastHeartbeatAt;
 
     public MonitoringHostedService(
         AlertOrchestrator orchestrator,
@@ -33,12 +37,77 @@ public sealed class MonitoringHostedService : BackgroundService
         _logger = logger;
     }
 
+    public bool IsRunning
+    {
+        get
+        {
+            lock (_stateLock)
+            {
+                return _isRunning;
+            }
+        }
+    }
+
+    public bool IsPaused
+    {
+        get
+        {
+            lock (_stateLock)
+            {
+                return _isPaused;
+            }
+        }
+    }
+
+    public string StatusText
+    {
+        get
+        {
+            lock (_stateLock)
+            {
+                if (!_isRunning)
+                {
+                    return "Мониторинг останавливается…";
+                }
+
+                return _isPaused
+                    ? "Мониторинг на паузе"
+                    : "Мониторинг включен";
+            }
+        }
+    }
+
+    public event EventHandler? StatusChanged;
+
+    public void Pause()
+    {
+        lock (_stateLock)
+        {
+            _isPaused = true;
+        }
+
+        RaiseStatusChanged();
+        _logger.LogInformation("Мониторинг поставлен на паузу пользователем");
+    }
+
+    public void Resume()
+    {
+        lock (_stateLock)
+        {
+            _isPaused = false;
+        }
+
+        RaiseStatusChanged();
+        _logger.LogInformation("Мониторинг возобновлен пользователем");
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var pollInterval = ResolvePollInterval(_monitoringOptions.PollIntervalSeconds);
         var startupAt = DateTimeOffset.UtcNow;
         var since = startupAt - ResolveInitialLookback(_monitoringOptions.InitialLookbackMinutes);
 
+        SetRunning(true);
         await TryRecoverPreviousShutdownAsync(startupAt, stoppingToken);
         _logger.LogInformation(
             "Фоновый мониторинг событий запущен. Интервал: {PollIntervalSeconds} сек, начальный lookback: {LookbackMinutes} мин",
@@ -49,8 +118,12 @@ public sealed class MonitoringHostedService : BackgroundService
         {
             try
             {
-                await _orchestrator.ProcessAsync(since, stoppingToken);
-                since = DateTimeOffset.UtcNow - pollInterval;
+                if (!IsPaused)
+                {
+                    await _orchestrator.ProcessAsync(since, stoppingToken);
+                    since = DateTimeOffset.UtcNow - pollInterval;
+                    await TrySendHeartbeatAsync(stoppingToken);
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -71,7 +144,46 @@ public sealed class MonitoringHostedService : BackgroundService
             }
         }
 
+        SetRunning(false);
         _logger.LogInformation("Фоновый мониторинг событий остановлен");
+    }
+
+    private async Task TrySendHeartbeatAsync(CancellationToken cancellationToken)
+    {
+        var settings = await _settingsStore.LoadAsync(cancellationToken);
+        if (!settings.HeartbeatEnabled || !settings.IsValid || !settings.HasEnabledChannel)
+        {
+            return;
+        }
+
+        var intervalMinutes = settings.HeartbeatIntervalMinutes < 5
+            ? _monitoringOptions.DefaultHeartbeatIntervalMinutes
+            : settings.HeartbeatIntervalMinutes;
+        var now = DateTimeOffset.UtcNow;
+
+        if (_lastHeartbeatAt is not null
+            && now - _lastHeartbeatAt < TimeSpan.FromMinutes(intervalMinutes))
+        {
+            return;
+        }
+
+        if (settings.IsWithinQuietHours(now))
+        {
+            return;
+        }
+
+        var heartbeat = new MachineEvent
+        {
+            Type = MachineEventType.Heartbeat,
+            OccurredAt = now,
+            Source = "AlarmProgram",
+            EventId = null,
+            HostName = Environment.MachineName,
+            Message = $"Периодический heartbeat каждые {intervalMinutes} мин."
+        };
+
+        await _orchestrator.ProcessMachineEventAsync(heartbeat, settings, cancellationToken);
+        _lastHeartbeatAt = now;
     }
 
     private async Task TryRecoverPreviousShutdownAsync(
@@ -105,6 +217,18 @@ public sealed class MonitoringHostedService : BackgroundService
             previousRawEvent.OccurredAt);
         await _orchestrator.ProcessRawEventAsync(previousRawEvent, settings, cancellationToken);
     }
+
+    private void SetRunning(bool isRunning)
+    {
+        lock (_stateLock)
+        {
+            _isRunning = isRunning;
+        }
+
+        RaiseStatusChanged();
+    }
+
+    private void RaiseStatusChanged() => StatusChanged?.Invoke(this, EventArgs.Empty);
 
     private static bool IsShutdownRelated(MachineEventType type) =>
         type is MachineEventType.Shutdown or MachineEventType.Restart or MachineEventType.UnexpectedShutdown;

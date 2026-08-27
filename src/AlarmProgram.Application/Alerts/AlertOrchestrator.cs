@@ -15,6 +15,7 @@ public sealed class AlertOrchestrator
     private readonly IAlertFormatter _formatter;
     private readonly IReadOnlyList<INotificationChannel> _channels;
     private readonly ISettingsStore _settingsStore;
+    private readonly IAlertJournal _alertJournal;
     private readonly ILogger<AlertOrchestrator> _logger;
     private readonly TimeSpan _deduplicationWindow;
     private readonly object _deduplicationLock = new();
@@ -27,6 +28,7 @@ public sealed class AlertOrchestrator
         IAlertFormatter formatter,
         IEnumerable<INotificationChannel> channels,
         ISettingsStore settingsStore,
+        IAlertJournal alertJournal,
         IOptions<MonitoringOptions> monitoringOptions,
         ILogger<AlertOrchestrator> logger)
     {
@@ -36,6 +38,7 @@ public sealed class AlertOrchestrator
         _formatter = formatter;
         _channels = channels.ToArray();
         _settingsStore = settingsStore;
+        _alertJournal = alertJournal;
         _deduplicationWindow = ResolveDeduplicationWindow(monitoringOptions.Value.DeduplicationWindowSeconds);
         _logger = logger;
     }
@@ -55,6 +58,16 @@ public sealed class AlertOrchestrator
             cancellationToken.ThrowIfCancellationRequested();
             await ProcessRawEventAsync(rawEvent, settings, cancellationToken);
         }
+    }
+
+    public async Task ProcessMachineEventAsync(
+        MachineEvent machineEvent,
+        UserSettings? settings = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(machineEvent);
+        settings ??= await _settingsStore.LoadAsync(cancellationToken);
+        await ProcessClassifiedEventAsync(machineEvent, settings, cancellationToken);
     }
 
     public async Task ProcessRawEventAsync(
@@ -89,6 +102,14 @@ public sealed class AlertOrchestrator
             return;
         }
 
+        await ProcessClassifiedEventAsync(machineEvent, settings, cancellationToken);
+    }
+
+    private async Task ProcessClassifiedEventAsync(
+        MachineEvent machineEvent,
+        UserSettings settings,
+        CancellationToken cancellationToken)
+    {
         if (IsDuplicate(machineEvent))
         {
             _logger.LogDebug(
@@ -101,7 +122,7 @@ public sealed class AlertOrchestrator
         if (!_filter.ShouldNotify(machineEvent, settings))
         {
             _logger.LogInformation(
-                "Событие {EventType} на {HostName} отфильтровано",
+                "Событие {EventType} на {HostName} отфильтровано (quiet hours/settings)",
                 machineEvent.Type,
                 machineEvent.HostName);
             return;
@@ -124,7 +145,9 @@ public sealed class AlertOrchestrator
 
         if (_channels.Count == 0)
         {
-            _logger.LogWarning("Нет зарегистрированных каналов уведомлений");
+            _logger.LogWarning(
+                "Нет зарегистрированных каналов уведомлений. CorrelationId={CorrelationId}",
+                message.CorrelationId);
             return;
         }
 
@@ -134,10 +157,24 @@ public sealed class AlertOrchestrator
             {
                 await channel.SendAsync(message, cancellationToken);
                 _logger.LogInformation(
-                    "Алерт {EventType} отправлен в {Channel} для {HostName}",
+                    "Алерт {EventType} отправлен в {Channel} для {HostName}. CorrelationId={CorrelationId}",
                     message.EventType,
                     channel.Name,
-                    message.HostName);
+                    message.HostName,
+                    message.CorrelationId);
+
+                await _alertJournal.AppendAsync(
+                    new AlertJournalEntry
+                    {
+                        Timestamp = DateTimeOffset.UtcNow,
+                        EventType = message.EventType,
+                        Subject = message.Subject,
+                        Status = "Sent",
+                        Channel = channel.Name,
+                        HostName = message.HostName,
+                        CorrelationId = message.CorrelationId
+                    },
+                    cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -147,10 +184,26 @@ public sealed class AlertOrchestrator
             {
                 _logger.LogError(
                     ex,
-                    "Ошибка отправки алерта {EventType} в {Channel} для {HostName}",
+                    "Ошибка отправки алерта {EventType} в {Channel} для {HostName}. CorrelationId={CorrelationId}. ErrorType={ErrorType}",
                     message.EventType,
                     channel.Name,
-                    message.HostName);
+                    message.HostName,
+                    message.CorrelationId,
+                    ex.GetType().Name);
+
+                await _alertJournal.AppendAsync(
+                    new AlertJournalEntry
+                    {
+                        Timestamp = DateTimeOffset.UtcNow,
+                        EventType = message.EventType,
+                        Subject = message.Subject,
+                        Status = "Failed",
+                        Channel = channel.Name,
+                        HostName = message.HostName,
+                        CorrelationId = message.CorrelationId,
+                        Details = ex.Message
+                    },
+                    cancellationToken);
             }
         }
     }

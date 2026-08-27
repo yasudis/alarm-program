@@ -17,6 +17,7 @@ namespace AlarmProgram.UI;
 public partial class App : System.Windows.Application
 {
     private IHost? _host;
+    private TrayIconService? _trayIconService;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -42,15 +43,20 @@ public partial class App : System.Windows.Application
                 loggerConfiguration
                     .MinimumLevel.Information()
                     .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+                    .Enrich.FromLogContext()
                     .WriteTo.File(
                         logPath,
                         rollingInterval: RollingInterval.Day,
-                        retainedFileCountLimit: retainedFileCountLimit);
+                        retainedFileCountLimit: retainedFileCountLimit,
+                        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
             })
             .ConfigureServices((_, services) =>
             {
                 services.AddInfrastructure();
-                services.AddHostedService<MonitoringHostedService>();
+                services.AddSingleton<MonitoringHostedService>();
+                services.AddSingleton<IMonitoringController>(sp => sp.GetRequiredService<MonitoringHostedService>());
+                services.AddHostedService(sp => sp.GetRequiredService<MonitoringHostedService>());
+                services.AddSingleton<TrayIconService>();
                 services.AddSingleton<SettingsViewModel>();
                 services.AddSingleton<MainViewModel>();
                 services.AddSingleton<MainWindow>();
@@ -72,6 +78,7 @@ public partial class App : System.Windows.Application
 
         var mainViewModel = _host.Services.GetRequiredService<MainViewModel>();
         await mainViewModel.InitializeAsync();
+        _trayIconService = _host.Services.GetRequiredService<TrayIconService>();
         _host.Services.GetRequiredService<MainWindow>().Show();
 
         base.OnStartup(e);
@@ -79,6 +86,8 @@ public partial class App : System.Windows.Application
 
     protected override async void OnExit(ExitEventArgs e)
     {
+        _trayIconService?.Dispose();
+
         if (_host is not null)
         {
             await _host.StopAsync();

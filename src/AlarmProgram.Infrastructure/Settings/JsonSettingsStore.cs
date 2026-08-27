@@ -54,7 +54,15 @@ public sealed class JsonSettingsStore : ISettingsStore
             NotifyOnStartup = dto.NotifyOnStartup,
             NotifyOnShutdown = dto.NotifyOnShutdown,
             NotifyOnRestart = dto.NotifyOnRestart,
-            NotifyOnUnexpectedShutdown = dto.NotifyOnUnexpectedShutdown
+            NotifyOnUnexpectedShutdown = dto.NotifyOnUnexpectedShutdown,
+            NotifyOnUserLogon = dto.NotifyOnUserLogon,
+            HeartbeatEnabled = dto.HeartbeatEnabled,
+            HeartbeatIntervalMinutes = dto.HeartbeatIntervalMinutes <= 0 ? 60 : dto.HeartbeatIntervalMinutes,
+            QuietHoursEnabled = dto.QuietHoursEnabled,
+            QuietHoursStart = ParseTime(dto.QuietHoursStart, TimeSpan.FromHours(23)),
+            QuietHoursEnd = ParseTime(dto.QuietHoursEnd, TimeSpan.FromHours(7)),
+            RunAtWindowsStartup = dto.RunAtWindowsStartup,
+            MinimizeToTray = dto.MinimizeToTray
         };
     }
 
@@ -81,7 +89,15 @@ public sealed class JsonSettingsStore : ISettingsStore
             NotifyOnStartup = settings.NotifyOnStartup,
             NotifyOnShutdown = settings.NotifyOnShutdown,
             NotifyOnRestart = settings.NotifyOnRestart,
-            NotifyOnUnexpectedShutdown = settings.NotifyOnUnexpectedShutdown
+            NotifyOnUnexpectedShutdown = settings.NotifyOnUnexpectedShutdown,
+            NotifyOnUserLogon = settings.NotifyOnUserLogon,
+            HeartbeatEnabled = settings.HeartbeatEnabled,
+            HeartbeatIntervalMinutes = settings.HeartbeatIntervalMinutes,
+            QuietHoursEnabled = settings.QuietHoursEnabled,
+            QuietHoursStart = FormatTime(settings.QuietHoursStart),
+            QuietHoursEnd = FormatTime(settings.QuietHoursEnd),
+            RunAtWindowsStartup = settings.RunAtWindowsStartup,
+            MinimizeToTray = settings.MinimizeToTray
         };
 
         var directory = Path.GetDirectoryName(_filePath);
@@ -107,4 +123,19 @@ public sealed class JsonSettingsStore : ISettingsStore
         path = path.Replace("%AppData%", Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), StringComparison.OrdinalIgnoreCase);
         return Path.GetFullPath(path);
     }
+
+    private static TimeSpan ParseTime(string? value, TimeSpan fallback)
+    {
+        if (TimeSpan.TryParse(value, out var parsed)
+            && parsed >= TimeSpan.Zero
+            && parsed < TimeSpan.FromDays(1))
+        {
+            return parsed;
+        }
+
+        return fallback;
+    }
+
+    private static string FormatTime(TimeSpan value) =>
+        $"{(int)value.TotalHours:00}:{value.Minutes:00}";
 }

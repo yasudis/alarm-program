@@ -87,13 +87,49 @@ public class UserSettingsTests
             NotifyOnStartup = true,
             NotifyOnShutdown = false,
             NotifyOnRestart = true,
-            NotifyOnUnexpectedShutdown = false
+            NotifyOnUnexpectedShutdown = false,
+            NotifyOnUserLogon = true,
+            HeartbeatEnabled = false
         };
 
         Assert.True(settings.IsEventEnabled(MachineEventType.Startup));
         Assert.False(settings.IsEventEnabled(MachineEventType.Shutdown));
         Assert.True(settings.IsEventEnabled(MachineEventType.Restart));
         Assert.False(settings.IsEventEnabled(MachineEventType.UnexpectedShutdown));
+        Assert.True(settings.IsEventEnabled(MachineEventType.UserLogon));
+        Assert.False(settings.IsEventEnabled(MachineEventType.Heartbeat));
         Assert.False(settings.IsEventEnabled(MachineEventType.Unknown));
+    }
+
+    [Fact]
+    public void IsWithinQuietHours_handles_overnight_window()
+    {
+        var settings = new UserSettings
+        {
+            QuietHoursEnabled = true,
+            QuietHoursStart = TimeSpan.FromHours(23),
+            QuietHoursEnd = TimeSpan.FromHours(7)
+        };
+
+        var today = DateTime.Today;
+        var late = new DateTimeOffset(DateTime.SpecifyKind(today.AddHours(23).AddMinutes(30), DateTimeKind.Local));
+        var early = new DateTimeOffset(DateTime.SpecifyKind(today.AddHours(3), DateTimeKind.Local));
+        var day = new DateTimeOffset(DateTime.SpecifyKind(today.AddHours(12), DateTimeKind.Local));
+
+        Assert.True(settings.IsWithinQuietHours(late));
+        Assert.True(settings.IsWithinQuietHours(early));
+        Assert.False(settings.IsWithinQuietHours(day));
+    }
+
+    [Fact]
+    public void Validate_rejects_invalid_heartbeat_interval()
+    {
+        var settings = new UserSettings
+        {
+            HeartbeatEnabled = true,
+            HeartbeatIntervalMinutes = 2
+        };
+
+        Assert.Contains(settings.Validate(), error => error.Contains("heartbeat", StringComparison.OrdinalIgnoreCase));
     }
 }

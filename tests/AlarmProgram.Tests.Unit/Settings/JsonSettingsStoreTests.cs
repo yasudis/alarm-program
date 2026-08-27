@@ -37,7 +37,15 @@ public class JsonSettingsStoreTests
             TelegramChatId = "777",
             DiscordEnabled = true,
             DiscordWebhookUrl = "https://discord.com/api/webhooks/1/secret-token",
-            NotifyOnRestart = false
+            NotifyOnRestart = false,
+            NotifyOnUserLogon = true,
+            HeartbeatEnabled = true,
+            HeartbeatIntervalMinutes = 30,
+            QuietHoursEnabled = true,
+            QuietHoursStart = TimeSpan.FromHours(22),
+            QuietHoursEnd = TimeSpan.FromHours(6),
+            RunAtWindowsStartup = true,
+            MinimizeToTray = false
         };
 
         await store.SaveAsync(original);
@@ -49,6 +57,14 @@ public class JsonSettingsStoreTests
         Assert.True(restored.TelegramEnabled);
         Assert.True(restored.DiscordEnabled);
         Assert.False(restored.NotifyOnRestart);
+        Assert.True(restored.NotifyOnUserLogon);
+        Assert.True(restored.HeartbeatEnabled);
+        Assert.Equal(30, restored.HeartbeatIntervalMinutes);
+        Assert.True(restored.QuietHoursEnabled);
+        Assert.Equal(TimeSpan.FromHours(22), restored.QuietHoursStart);
+        Assert.Equal(TimeSpan.FromHours(6), restored.QuietHoursEnd);
+        Assert.True(restored.RunAtWindowsStartup);
+        Assert.False(restored.MinimizeToTray);
     }
 
     [Fact]

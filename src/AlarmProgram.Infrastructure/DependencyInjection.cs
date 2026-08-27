@@ -1,7 +1,10 @@
 using AlarmProgram.Application;
 using AlarmProgram.Application.Abstractions;
 using AlarmProgram.Application.Configuration;
+using AlarmProgram.Infrastructure.Autostart;
+using AlarmProgram.Infrastructure.Diagnostics;
 using AlarmProgram.Infrastructure.Events;
+using AlarmProgram.Infrastructure.Journal;
 using AlarmProgram.Infrastructure.Notifications;
 using AlarmProgram.Infrastructure.Security;
 using AlarmProgram.Infrastructure.Settings;
@@ -18,6 +21,9 @@ public static class DependencyInjection
 
         services.AddSingleton<ISecretProtector, DpapiSecretProtector>();
         services.AddSingleton<ISettingsStore, JsonSettingsStore>();
+        services.AddSingleton<IAlertJournal, FileAlertJournal>();
+        services.AddSingleton<IAutostartService, WindowsAutostartService>();
+        services.AddSingleton<IDiagnosticsService, FileDiagnosticsService>();
         services.AddSingleton<IEventCollector, WindowsEventLogReader>();
         services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromSeconds(30) });
         services.AddSingleton<INotificationChannel, TelegramNotificationChannel>();

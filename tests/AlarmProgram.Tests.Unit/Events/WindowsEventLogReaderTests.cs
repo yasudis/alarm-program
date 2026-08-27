@@ -47,6 +47,9 @@ public class WindowsEventLogReaderTests
         Assert.NotNull(provider.GetRequiredService<IEventClassifier>());
         Assert.NotNull(provider.GetRequiredService<IAlertFormatter>());
         Assert.NotNull(provider.GetRequiredService<INotificationChannel>());
+        Assert.NotNull(provider.GetRequiredService<IAlertJournal>());
+        Assert.NotNull(provider.GetRequiredService<IAutostartService>());
+        Assert.NotNull(provider.GetRequiredService<IDiagnosticsService>());
         Assert.NotNull(provider.GetRequiredService<AlertOrchestrator>());
     }
 }

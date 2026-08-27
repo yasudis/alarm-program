@@ -13,6 +13,8 @@ public class AlertFormatterTests
     [InlineData(MachineEventType.Shutdown, "ПК выключился")]
     [InlineData(MachineEventType.Restart, "ПК перезагрузился")]
     [InlineData(MachineEventType.UnexpectedShutdown, "Некорректное выключение ПК")]
+    [InlineData(MachineEventType.UserLogon, "Вход пользователя в Windows")]
+    [InlineData(MachineEventType.Heartbeat, "Heartbeat: ПК в сети")]
     public void Format_uses_stable_subject_and_includes_host_and_timestamp(
         MachineEventType eventType,
         string expectedSubject)
@@ -22,11 +24,13 @@ public class AlertFormatterTests
         Assert.Equal(expectedSubject, alert.Subject);
         Assert.Equal(eventType, alert.EventType);
         Assert.Equal("TEST-PC", alert.HostName);
+        Assert.False(string.IsNullOrWhiteSpace(alert.CorrelationId));
         Assert.StartsWith(expectedSubject, alert.Body);
         Assert.Contains("Хост: TEST-PC", alert.Body);
         Assert.Contains("Время: 2026-08-24 10:30:00 UTC", alert.Body);
         Assert.Contains($"Тип: {eventType}", alert.Body);
         Assert.Contains("Источник: EventLog (Event ID 6005)", alert.Body);
+        Assert.Contains("CorrelationId:", alert.Body);
         Assert.Contains("Kernel details", alert.Body);
     }
 

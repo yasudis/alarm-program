@@ -19,6 +19,17 @@ public sealed class AlertFilter
             return false;
         }
 
-        return settings.HasEnabledChannel;
+        if (!settings.HasEnabledChannel)
+        {
+            return false;
+        }
+
+        if (machineEvent.Type != MachineEventType.UnexpectedShutdown
+            && settings.IsWithinQuietHours(machineEvent.OccurredAt))
+        {
+            return false;
+        }
+
+        return true;
     }
 }
