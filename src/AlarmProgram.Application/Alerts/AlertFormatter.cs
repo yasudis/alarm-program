@@ -103,6 +103,12 @@ public sealed class AlertFormatter : IAlertFormatter
         MachineEventType.NetworkOffline => "Сеть недоступна",
         MachineEventType.NetworkOnline => "Сеть восстановлена",
         MachineEventType.SystemResume => "ПК вышел из режима сна",
+        MachineEventType.SessionLock => "Экран заблокирован",
+        MachineEventType.SessionUnlock => "Экран разблокирован",
+        MachineEventType.LowDiskSpace => "Мало места на диске",
+        MachineEventType.BatteryLow => "Низкий заряд батареи",
+        MachineEventType.AcPowerLost => "Переход на батарею",
+        MachineEventType.AcPowerRestored => "Питание от сети восстановлено",
         _ => "Событие ПК"
     };
 }

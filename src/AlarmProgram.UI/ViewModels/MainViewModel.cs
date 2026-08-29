@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
+using System.Reflection;
 using AlarmProgram.Application.Abstractions;
+using AlarmProgram.Application.Alerts;
 using AlarmProgram.Application.Configuration;
 using AlarmProgram.Domain;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,6 +15,8 @@ public sealed partial class MainViewModel : ObservableObject
 {
     private readonly AppOptions _appOptions;
     private readonly IMonitoringController _monitoringController;
+    private readonly IAlertMuteState _muteState;
+    private readonly ISettingsStore _settingsStore;
     private readonly IAlertJournal _alertJournal;
     private readonly IDiagnosticsService _diagnosticsService;
     private readonly ILogger<MainViewModel> _logger;
@@ -21,6 +25,8 @@ public sealed partial class MainViewModel : ObservableObject
         IOptions<AppOptions> appOptions,
         SettingsViewModel settingsViewModel,
         IMonitoringController monitoringController,
+        IAlertMuteState muteState,
+        ISettingsStore settingsStore,
         IAlertJournal alertJournal,
         IDiagnosticsService diagnosticsService,
         ILogger<MainViewModel> logger)
@@ -28,16 +34,22 @@ public sealed partial class MainViewModel : ObservableObject
         _appOptions = appOptions.Value;
         Settings = settingsViewModel;
         _monitoringController = monitoringController;
+        _muteState = muteState;
+        _settingsStore = settingsStore;
         _alertJournal = alertJournal;
         _diagnosticsService = diagnosticsService;
         _logger = logger;
 
-        ApplicationTitle = _appOptions.ApplicationName;
+        ApplicationVersion = ResolveVersion();
+        ApplicationTitle = $"{_appOptions.ApplicationName} {ApplicationVersion}";
         StatusMessage = _monitoringController.StatusText;
         _monitoringController.StatusChanged += OnMonitoringStatusChanged;
+        _muteState.Changed += OnMuteChanged;
     }
 
     public string ApplicationTitle { get; }
+
+    public string ApplicationVersion { get; }
 
     public SettingsViewModel Settings { get; }
 
@@ -45,13 +57,19 @@ public sealed partial class MainViewModel : ObservableObject
 
     public bool IsMonitoringPaused => _monitoringController.IsPaused;
 
+    public bool IsMuted => _muteState.IsMuted;
+
     [ObservableProperty]
     private string _statusMessage;
+
+    [ObservableProperty]
+    private string _setupHint = string.Empty;
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         await Settings.InitializeAsync(cancellationToken);
         await RefreshJournalAsync(cancellationToken);
+        await RefreshSetupHintAsync(cancellationToken);
         StatusMessage = _monitoringController.StatusText;
     }
 
@@ -91,6 +109,22 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void MuteFor30Minutes()
+    {
+        _muteState.MuteFor(TimeSpan.FromMinutes(30));
+        StatusMessage = _monitoringController.StatusText;
+        OnPropertyChanged(nameof(IsMuted));
+    }
+
+    [RelayCommand]
+    private void ClearMute()
+    {
+        _muteState.ClearMute();
+        StatusMessage = _monitoringController.StatusText;
+        OnPropertyChanged(nameof(IsMuted));
+    }
+
+    [RelayCommand]
     private async Task ExportJournalAsync()
     {
         try
@@ -123,6 +157,8 @@ public sealed partial class MainViewModel : ObservableObject
 
     private bool CanResume() => _monitoringController.IsPaused;
 
+    private void OnMuteChanged(object? sender, EventArgs e) => OnMonitoringStatusChanged(sender, e);
+
     private void OnMonitoringStatusChanged(object? sender, EventArgs e)
     {
         var dispatcher = System.Windows.Application.Current?.Dispatcher;
@@ -139,8 +175,25 @@ public sealed partial class MainViewModel : ObservableObject
     {
         StatusMessage = _monitoringController.StatusText;
         OnPropertyChanged(nameof(IsMonitoringPaused));
+        OnPropertyChanged(nameof(IsMuted));
         PauseMonitoringCommand.NotifyCanExecuteChanged();
         ResumeMonitoringCommand.NotifyCanExecuteChanged();
+    }
+
+    private async Task RefreshSetupHintAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var settings = await _settingsStore.LoadAsync(cancellationToken);
+            SetupHint = settings.HasEnabledChannel
+                ? string.Empty
+                : "Первый запуск: включите Telegram или Discord, укажите токен и Chat ID, сохраните настройки и нажмите «Тестовая отправка».";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Не удалось проверить настройки первого запуска");
+            SetupHint = "Не удалось загрузить настройки. Проверьте файл settings.json.";
+        }
     }
 
     private async Task RefreshJournalAsync(CancellationToken cancellationToken)
@@ -158,5 +211,18 @@ public sealed partial class MainViewModel : ObservableObject
         {
             _logger.LogWarning(ex, "Не удалось обновить журнал алертов");
         }
+    }
+
+    private static string ResolveVersion()
+    {
+        var assembly = typeof(App).Assembly;
+        var informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        if (!string.IsNullOrWhiteSpace(informational))
+        {
+            var plus = informational.IndexOf('+');
+            return plus > 0 ? informational[..plus] : informational;
+        }
+
+        return assembly.GetName().Version?.ToString(3) ?? "1.0.0";
     }
 }

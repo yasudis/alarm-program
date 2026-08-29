@@ -7,6 +7,9 @@ public sealed class UserSettings
     private static readonly Regex TelegramTokenPattern =
         new(@"^\d{8,12}:[A-Za-z0-9_-]{30,}$", RegexOptions.Compiled);
 
+    private static readonly Regex TelegramChatIdPattern =
+        new(@"^(@[A-Za-z][A-Za-z0-9_]{4,}|-?\d{1,20})$", RegexOptions.Compiled);
+
     public string TelegramBotToken { get; set; } = string.Empty;
 
     public string TelegramChatId { get; set; } = string.Empty;
@@ -36,6 +39,24 @@ public sealed class UserSettings
     public bool NotifyOnNetworkOnline { get; set; } = true;
 
     public bool NotifyOnSystemResume { get; set; }
+
+    public bool NotifyOnSessionLock { get; set; }
+
+    public bool NotifyOnSessionUnlock { get; set; }
+
+    public bool NotifyOnLowDiskSpace { get; set; } = true;
+
+    public bool NotifyOnBatteryLow { get; set; } = true;
+
+    public bool NotifyOnAcPowerLost { get; set; } = true;
+
+    public bool NotifyOnAcPowerRestored { get; set; } = true;
+
+    public int LowDiskSpaceThresholdPercent { get; set; } = 10;
+
+    public int BatteryLowThresholdPercent { get; set; } = 15;
+
+    public int AlertCooldownMinutes { get; set; }
 
     public bool HeartbeatEnabled { get; set; }
 
@@ -72,8 +93,29 @@ public sealed class UserSettings
         MachineEventType.NetworkOffline => NotifyOnNetworkOffline,
         MachineEventType.NetworkOnline => NotifyOnNetworkOnline,
         MachineEventType.SystemResume => NotifyOnSystemResume,
+        MachineEventType.SessionLock => NotifyOnSessionLock,
+        MachineEventType.SessionUnlock => NotifyOnSessionUnlock,
+        MachineEventType.LowDiskSpace => NotifyOnLowDiskSpace,
+        MachineEventType.BatteryLow => NotifyOnBatteryLow,
+        MachineEventType.AcPowerLost => NotifyOnAcPowerLost,
+        MachineEventType.AcPowerRestored => NotifyOnAcPowerRestored,
         _ => false
     };
+
+    public IReadOnlyList<string> GetTelegramChatIds() => ParseTelegramChatIds(TelegramChatId);
+
+    public static IReadOnlyList<string> ParseTelegramChatIds(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return [];
+        }
+
+        return raw
+            .Split([',', ';', '\n', '\r', ' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+    }
 
     public bool IsWithinQuietHours(DateTimeOffset timestamp)
     {
@@ -112,9 +154,14 @@ public sealed class UserSettings
                 errors.Add("Некорректный формат Telegram bot token.");
             }
 
-            if (string.IsNullOrWhiteSpace(TelegramChatId))
+            var chatIds = GetTelegramChatIds();
+            if (chatIds.Count == 0)
             {
                 errors.Add("Telegram chat id обязателен.");
+            }
+            else if (chatIds.Any(id => !TelegramChatIdPattern.IsMatch(id)))
+            {
+                errors.Add("Некорректный формат Telegram chat id. Можно несколько через запятую.");
             }
         }
 
@@ -156,6 +203,21 @@ public sealed class UserSettings
         if (!string.IsNullOrWhiteSpace(AlertBodyTemplate) && AlertBodyTemplate.Length > 4000)
         {
             errors.Add("Шаблон сообщения слишком длинный (макс. 4000 символов).");
+        }
+
+        if (LowDiskSpaceThresholdPercent is < 1 or > 50)
+        {
+            errors.Add("Порог свободного места на диске должен быть от 1 до 50%.");
+        }
+
+        if (BatteryLowThresholdPercent is < 1 or > 50)
+        {
+            errors.Add("Порог низкого заряда батареи должен быть от 1 до 50%.");
+        }
+
+        if (AlertCooldownMinutes is < 0 or > 1440)
+        {
+            errors.Add("Cooldown алертов должен быть от 0 до 1440 минут.");
         }
 
         return errors;

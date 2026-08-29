@@ -17,10 +17,14 @@ public sealed class AlertOrchestrator
     private readonly ISettingsStore _settingsStore;
     private readonly IAlertJournal _alertJournal;
     private readonly IAlertOutbox _alertOutbox;
+    private readonly IAlertMuteState _muteState;
+    private readonly IWindowsEventLogWriter _windowsEventLogWriter;
     private readonly ILogger<AlertOrchestrator> _logger;
     private readonly TimeSpan _deduplicationWindow;
     private readonly object _deduplicationLock = new();
     private readonly Dictionary<string, DateTimeOffset> _seenEvents = new(StringComparer.Ordinal);
+    private readonly object _cooldownLock = new();
+    private readonly Dictionary<MachineEventType, DateTimeOffset> _lastSentByType = [];
 
     public AlertOrchestrator(
         IEventCollector collector,
@@ -31,6 +35,8 @@ public sealed class AlertOrchestrator
         ISettingsStore settingsStore,
         IAlertJournal alertJournal,
         IAlertOutbox alertOutbox,
+        IAlertMuteState muteState,
+        IWindowsEventLogWriter windowsEventLogWriter,
         IOptions<MonitoringOptions> monitoringOptions,
         ILogger<AlertOrchestrator> logger)
     {
@@ -42,6 +48,8 @@ public sealed class AlertOrchestrator
         _settingsStore = settingsStore;
         _alertJournal = alertJournal;
         _alertOutbox = alertOutbox;
+        _muteState = muteState;
+        _windowsEventLogWriter = windowsEventLogWriter;
         _deduplicationWindow = ResolveDeduplicationWindow(monitoringOptions.Value.DeduplicationWindowSeconds);
         _logger = logger;
     }
@@ -181,10 +189,19 @@ public sealed class AlertOrchestrator
             return;
         }
 
-        if (!_filter.ShouldNotify(machineEvent, settings))
+        DateTimeOffset? lastSent = null;
+        lock (_cooldownLock)
+        {
+            if (_lastSentByType.TryGetValue(machineEvent.Type, out var value))
+            {
+                lastSent = value;
+            }
+        }
+
+        if (!_filter.ShouldNotify(machineEvent, settings, _muteState, lastSentOfType: lastSent))
         {
             _logger.LogInformation(
-                "Событие {EventType} на {HostName} отфильтровано (quiet hours/settings)",
+                "Событие {EventType} на {HostName} отфильтровано (quiet hours/settings/mute/cooldown)",
                 machineEvent.Type,
                 machineEvent.HostName);
             return;
@@ -253,6 +270,9 @@ public sealed class AlertOrchestrator
                     message.CorrelationId,
                     ex.GetType().Name);
 
+                _windowsEventLogWriter.WriteError(
+                    $"Ошибка отправки {message.EventType} в {channel.Name}. CorrelationId={message.CorrelationId}. {ex.GetType().Name}: {ex.Message}");
+
                 await _alertOutbox.EnqueueAsync(message, channel.Name, cancellationToken);
 
                 await _alertJournal.AppendAsync(
@@ -269,6 +289,11 @@ public sealed class AlertOrchestrator
                     },
                     cancellationToken);
             }
+        }
+
+        lock (_cooldownLock)
+        {
+            _lastSentByType[machineEvent.Type] = DateTimeOffset.UtcNow;
         }
     }
 

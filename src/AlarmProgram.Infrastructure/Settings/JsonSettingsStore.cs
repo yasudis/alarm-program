@@ -118,7 +118,16 @@ public sealed class JsonSettingsStore : ISettingsStore
         RunAtWindowsStartup = dto.RunAtWindowsStartup,
         MinimizeToTray = dto.MinimizeToTray,
         DisplayName = dto.DisplayName ?? string.Empty,
-        AlertBodyTemplate = dto.AlertBodyTemplate
+        AlertBodyTemplate = dto.AlertBodyTemplate,
+        NotifyOnSessionLock = dto.NotifyOnSessionLock,
+        NotifyOnSessionUnlock = dto.NotifyOnSessionUnlock,
+        NotifyOnLowDiskSpace = dto.NotifyOnLowDiskSpace,
+        NotifyOnBatteryLow = dto.NotifyOnBatteryLow,
+        NotifyOnAcPowerLost = dto.NotifyOnAcPowerLost,
+        NotifyOnAcPowerRestored = dto.NotifyOnAcPowerRestored,
+        LowDiskSpaceThresholdPercent = dto.LowDiskSpaceThresholdPercent <= 0 ? 10 : dto.LowDiskSpaceThresholdPercent,
+        BatteryLowThresholdPercent = dto.BatteryLowThresholdPercent <= 0 ? 15 : dto.BatteryLowThresholdPercent,
+        AlertCooldownMinutes = dto.AlertCooldownMinutes < 0 ? 0 : dto.AlertCooldownMinutes
     };
 
     private SettingsFileDto MapToDto(UserSettings settings, bool encryptSecrets) => new()
@@ -152,7 +161,16 @@ public sealed class JsonSettingsStore : ISettingsStore
         RunAtWindowsStartup = settings.RunAtWindowsStartup,
         MinimizeToTray = settings.MinimizeToTray,
         DisplayName = settings.DisplayName ?? string.Empty,
-        AlertBodyTemplate = settings.AlertBodyTemplate
+        AlertBodyTemplate = settings.AlertBodyTemplate,
+        NotifyOnSessionLock = settings.NotifyOnSessionLock,
+        NotifyOnSessionUnlock = settings.NotifyOnSessionUnlock,
+        NotifyOnLowDiskSpace = settings.NotifyOnLowDiskSpace,
+        NotifyOnBatteryLow = settings.NotifyOnBatteryLow,
+        NotifyOnAcPowerLost = settings.NotifyOnAcPowerLost,
+        NotifyOnAcPowerRestored = settings.NotifyOnAcPowerRestored,
+        LowDiskSpaceThresholdPercent = settings.LowDiskSpaceThresholdPercent,
+        BatteryLowThresholdPercent = settings.BatteryLowThresholdPercent,
+        AlertCooldownMinutes = settings.AlertCooldownMinutes
     };
 
     private static async Task WriteDtoAsync(

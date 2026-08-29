@@ -63,10 +63,62 @@ public sealed class TelegramNotificationChannel : INotificationChannel, ITestabl
         }
 
         var token = settings.TelegramBotToken.Trim();
-        var chatId = settings.TelegramChatId.Trim();
-        var text = BuildText(message);
-        var url = $"https://api.telegram.org/bot{token}/sendMessage";
+        var chatIds = settings.GetTelegramChatIds();
+        if (chatIds.Count == 0)
+        {
+            const string reason = "Telegram chat id не задан";
+            _logger.LogInformation("Пропуск отправки в Telegram для {EventType}: {Reason}", message.EventType, reason);
+            return NotificationDispatchResult.Skipped(ChannelName, reason);
+        }
 
+        var text = BuildText(message);
+        var errors = new List<string>();
+        var successCount = 0;
+
+        foreach (var chatId in chatIds)
+        {
+            var url = $"https://api.telegram.org/bot{token}/sendMessage";
+            var result = await SendToChatAsync(url, token, chatId, text, message, cancellationToken);
+            if (result.IsSuccess)
+            {
+                successCount++;
+            }
+            else if (!result.IsSkipped && !string.IsNullOrWhiteSpace(result.Error))
+            {
+                errors.Add($"{chatId}: {result.Error}");
+            }
+        }
+
+        if (successCount == chatIds.Count)
+        {
+            return NotificationDispatchResult.Success(ChannelName);
+        }
+
+        if (successCount > 0)
+        {
+            _logger.LogWarning(
+                "Telegram частично отправлен ({Success}/{Total}). CorrelationId={CorrelationId}. Ошибки: {Errors}",
+                successCount,
+                chatIds.Count,
+                message.CorrelationId,
+                string.Join("; ", errors));
+            return NotificationDispatchResult.Success(ChannelName);
+        }
+
+        var error = errors.Count == 0
+            ? "Telegram sendMessage завершился без успешной попытки."
+            : string.Join("; ", errors);
+        return NotificationDispatchResult.Failed(ChannelName, error);
+    }
+
+    private async Task<NotificationDispatchResult> SendToChatAsync(
+        string url,
+        string token,
+        string chatId,
+        string text,
+        AlertMessage message,
+        CancellationToken cancellationToken)
+    {
         for (var attempt = 1; attempt <= _maxAttempts; attempt++)
         {
             try
@@ -85,7 +137,8 @@ public sealed class TelegramNotificationChannel : INotificationChannel, ITestabl
                 if (response.IsSuccessStatusCode)
                 {
                     _logger.LogInformation(
-                        "Telegram sendMessage выполнен: тип {EventType}, хост {HostName}, CorrelationId={CorrelationId}",
+                        "Telegram sendMessage выполнен: chat {ChatId}, тип {EventType}, хост {HostName}, CorrelationId={CorrelationId}",
+                        chatId,
                         message.EventType,
                         message.HostName,
                         message.CorrelationId);
@@ -96,7 +149,8 @@ public sealed class TelegramNotificationChannel : INotificationChannel, ITestabl
                 if (attempt < _maxAttempts && IsTransientStatusCode(response.StatusCode))
                 {
                     _logger.LogWarning(
-                        "Telegram sendMessage временно не удался (попытка {Attempt}/{MaxAttempts}): {Error}. CorrelationId={CorrelationId}, EventType={EventType}",
+                        "Telegram sendMessage временно не удался для {ChatId} (попытка {Attempt}/{MaxAttempts}): {Error}. CorrelationId={CorrelationId}, EventType={EventType}",
+                        chatId,
                         attempt,
                         _maxAttempts,
                         error,
@@ -107,7 +161,8 @@ public sealed class TelegramNotificationChannel : INotificationChannel, ITestabl
                 }
 
                 _logger.LogWarning(
-                    "Telegram sendMessage не удался: {Error}, тип {EventType}, хост {HostName}, CorrelationId={CorrelationId}",
+                    "Telegram sendMessage не удался для {ChatId}: {Error}, тип {EventType}, хост {HostName}, CorrelationId={CorrelationId}",
+                    chatId,
                     error,
                     message.EventType,
                     message.HostName,
@@ -122,7 +177,8 @@ public sealed class TelegramNotificationChannel : INotificationChannel, ITestabl
             {
                 _logger.LogWarning(
                     ex,
-                    "Ошибка сети при отправке в Telegram (попытка {Attempt}/{MaxAttempts}) для {EventType} на {HostName}. CorrelationId={CorrelationId}",
+                    "Ошибка сети при отправке в Telegram {ChatId} (попытка {Attempt}/{MaxAttempts}) для {EventType} на {HostName}. CorrelationId={CorrelationId}",
+                    chatId,
                     attempt,
                     _maxAttempts,
                     message.EventType,
@@ -135,7 +191,8 @@ public sealed class TelegramNotificationChannel : INotificationChannel, ITestabl
                 var error = $"{ex.GetType().Name}: {Redact(ex.Message, token)}";
                 _logger.LogError(
                     ex,
-                    "Ошибка сети при отправке в Telegram, тип {EventType}, хост {HostName}, CorrelationId={CorrelationId}: {Error}",
+                    "Ошибка сети при отправке в Telegram {ChatId}, тип {EventType}, хост {HostName}, CorrelationId={CorrelationId}: {Error}",
+                    chatId,
                     message.EventType,
                     message.HostName,
                     message.CorrelationId,

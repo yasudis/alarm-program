@@ -49,4 +49,22 @@ internal sealed class SettingsFileDto
     public string DisplayName { get; set; } = string.Empty;
 
     public string? AlertBodyTemplate { get; set; }
+
+    public bool NotifyOnSessionLock { get; set; }
+
+    public bool NotifyOnSessionUnlock { get; set; }
+
+    public bool NotifyOnLowDiskSpace { get; set; } = true;
+
+    public bool NotifyOnBatteryLow { get; set; } = true;
+
+    public bool NotifyOnAcPowerLost { get; set; } = true;
+
+    public bool NotifyOnAcPowerRestored { get; set; } = true;
+
+    public int LowDiskSpaceThresholdPercent { get; set; } = 10;
+
+    public int BatteryLowThresholdPercent { get; set; } = 15;
+
+    public int AlertCooldownMinutes { get; set; }
 }

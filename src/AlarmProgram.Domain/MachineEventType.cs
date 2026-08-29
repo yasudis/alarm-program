@@ -13,5 +13,11 @@ public enum MachineEventType
     NetworkOffline = 8,
     NetworkOnline = 9,
     SystemResume = 10,
-    UserLogoff = 11
+    UserLogoff = 11,
+    SessionLock = 12,
+    SessionUnlock = 13,
+    LowDiskSpace = 14,
+    BatteryLow = 15,
+    AcPowerLost = 16,
+    AcPowerRestored = 17
 }

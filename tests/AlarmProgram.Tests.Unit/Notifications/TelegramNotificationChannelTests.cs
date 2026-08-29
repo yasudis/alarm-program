@@ -124,6 +124,21 @@ public class TelegramNotificationChannelTests
         Assert.Equal(3, handler.SendCount);
     }
 
+    [Fact]
+    public async Task SendAsync_posts_to_each_telegram_chat_id()
+    {
+        var settings = ValidSettings();
+        settings.TelegramChatId = $"{ChatId}, 42";
+        var handler = new StubHandler();
+        var channel = CreateChannel(settings, handler);
+
+        await channel.SendAsync(CreateAlert());
+
+        Assert.Equal(2, handler.SendCount);
+        Assert.Contains(handler.Bodies, body => body.Contains($"\"chat_id\":\"{ChatId}\""));
+        Assert.Contains(handler.Bodies, body => body.Contains("\"chat_id\":\"42\""));
+    }
+
     private static TelegramNotificationChannel CreateChannel(
         UserSettings settings,
         StubHandler handler,
@@ -190,6 +205,8 @@ public class TelegramNotificationChannelTests
 
         public int SendCount { get; private set; }
 
+        public List<string> Bodies { get; } = [];
+
         public Queue<HttpStatusCode> StatusCodes { get; } = new();
 
         protected override async Task<HttpResponseMessage> SendAsync(
@@ -207,6 +224,10 @@ public class TelegramNotificationChannelTests
             LastBody = request.Content is null
                 ? null
                 : await request.Content.ReadAsStringAsync(cancellationToken);
+            if (LastBody is not null)
+            {
+                Bodies.Add(LastBody);
+            }
 
             var nextStatus = StatusCodes.Count > 0 ? StatusCodes.Dequeue() : StatusCode;
 

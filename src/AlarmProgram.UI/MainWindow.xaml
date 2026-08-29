@@ -46,6 +46,16 @@
                             Margin="8,0,0,0"
                             Content="Открыть логи"
                             Command="{Binding OpenLogsFolderCommand}" />
+                    <Button Width="150"
+                            Height="30"
+                            Margin="8,0,0,0"
+                            Content="Тишина 30 мин"
+                            Command="{Binding MuteFor30MinutesCommand}" />
+                    <Button Width="140"
+                            Height="30"
+                            Margin="8,0,0,0"
+                            Content="Снять тишину"
+                            Command="{Binding ClearMuteCommand}" />
                 </WrapPanel>
                 <TextBlock Text="{Binding StatusMessage}"
                            FontSize="15"
@@ -66,6 +76,11 @@
                     <TextBlock FontSize="18"
                                FontWeight="SemiBold"
                                Text="Настройки уведомлений" />
+                    <TextBlock Margin="0,8,0,0"
+                               Foreground="#FF8A5A00"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               Text="{Binding SetupHint}" />
 
                     <TextBlock Margin="0,12,0,0" Text="Отображаемое имя устройства" />
                     <TextBox Text="{Binding Settings.DisplayName, UpdateSourceTrigger=PropertyChanged}" />
@@ -77,7 +92,7 @@
                                Text="Telegram Bot Token" />
                     <TextBox Text="{Binding Settings.TelegramBotToken, UpdateSourceTrigger=PropertyChanged}" />
                     <TextBlock Margin="0,8,0,0"
-                               Text="Telegram Chat ID" />
+                               Text="Telegram Chat ID (несколько через запятую)" />
                     <TextBox Text="{Binding Settings.TelegramChatId, UpdateSourceTrigger=PropertyChanged}" />
 
                     <CheckBox Margin="0,16,0,0"
@@ -121,6 +136,24 @@
                         <CheckBox Margin="0,0,16,8"
                                   Content="System resume"
                                   IsChecked="{Binding Settings.NotifyOnSystemResume}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Session lock"
+                                  IsChecked="{Binding Settings.NotifyOnSessionLock}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Session unlock"
+                                  IsChecked="{Binding Settings.NotifyOnSessionUnlock}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Low disk space"
+                                  IsChecked="{Binding Settings.NotifyOnLowDiskSpace}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Battery low"
+                                  IsChecked="{Binding Settings.NotifyOnBatteryLow}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="AC power lost"
+                                  IsChecked="{Binding Settings.NotifyOnAcPowerLost}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="AC power restored"
+                                  IsChecked="{Binding Settings.NotifyOnAcPowerRestored}" />
                     </WrapPanel>
 
                     <TextBlock Margin="0,8,0,0"
@@ -154,6 +187,24 @@
                         <TextBox Width="70"
                                  Margin="8,0,0,0"
                                  Text="{Binding Settings.QuietHoursEnd, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+
+                    <TextBlock Margin="0,12,0,0"
+                               FontWeight="SemiBold"
+                               Text="Пороги и антиспам" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock VerticalAlignment="Center" Text="Диск, % свободно:" />
+                        <TextBox Width="60"
+                                 Margin="8,0,16,0"
+                                 Text="{Binding Settings.LowDiskSpaceThresholdPercent, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock VerticalAlignment="Center" Text="Батарея, %:" />
+                        <TextBox Width="60"
+                                 Margin="8,0,16,0"
+                                 Text="{Binding Settings.BatteryLowThresholdPercent, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock VerticalAlignment="Center" Text="Cooldown, мин:" />
+                        <TextBox Width="60"
+                                 Margin="8,0,0,0"
+                                 Text="{Binding Settings.AlertCooldownMinutes, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
 
                     <TextBlock Margin="0,12,0,0"

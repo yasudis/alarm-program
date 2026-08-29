@@ -25,7 +25,7 @@ public sealed class TrayIconService : IDisposable
 
         _notifyIcon = new NotifyIcon
         {
-            Text = "Alarm Program",
+            Text = $"Alarm Program {_mainViewModel.ApplicationVersion}",
             Visible = true,
             Icon = SystemIcons.Information
         };
@@ -35,6 +35,8 @@ public sealed class TrayIconService : IDisposable
         menu.Items.Add("Пауза мониторинга", null, (_, _) => _mainViewModel.PauseMonitoringCommand.Execute(null));
         menu.Items.Add("Возобновить мониторинг", null, (_, _) => _mainViewModel.ResumeMonitoringCommand.Execute(null));
         menu.Items.Add("Открыть логи", null, (_, _) => _mainViewModel.OpenLogsFolderCommand.Execute(null));
+        menu.Items.Add("Тишина 30 мин", null, (_, _) => _mainViewModel.MuteFor30MinutesCommand.Execute(null));
+        menu.Items.Add("Снять тишину", null, (_, _) => _mainViewModel.ClearMuteCommand.Execute(null));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Выход", null, (_, _) => System.Windows.Application.Current.Shutdown());
         _notifyIcon.ContextMenuStrip = menu;

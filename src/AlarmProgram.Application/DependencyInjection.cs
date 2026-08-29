@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddSingleton<IEventClassifier, EventClassifier>();
         services.AddSingleton<IAlertFormatter, AlertFormatter>();
         services.AddSingleton<AlertFilter>();
+        services.AddSingleton<IAlertMuteState, AlertMuteState>();
         services.AddSingleton<AlertOrchestrator>();
 
         return services;

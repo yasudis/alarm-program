@@ -78,6 +78,33 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _notifyOnSystemResume;
 
     [ObservableProperty]
+    private bool _notifyOnSessionLock;
+
+    [ObservableProperty]
+    private bool _notifyOnSessionUnlock;
+
+    [ObservableProperty]
+    private bool _notifyOnLowDiskSpace = true;
+
+    [ObservableProperty]
+    private bool _notifyOnBatteryLow = true;
+
+    [ObservableProperty]
+    private bool _notifyOnAcPowerLost = true;
+
+    [ObservableProperty]
+    private bool _notifyOnAcPowerRestored = true;
+
+    [ObservableProperty]
+    private int _lowDiskSpaceThresholdPercent = 10;
+
+    [ObservableProperty]
+    private int _batteryLowThresholdPercent = 15;
+
+    [ObservableProperty]
+    private int _alertCooldownMinutes;
+
+    [ObservableProperty]
     private bool _heartbeatEnabled;
 
     [ObservableProperty]
@@ -112,6 +139,12 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _testResultMessage = string.Empty;
+
+    public bool NeedsOnboarding => !TelegramEnabled && !DiscordEnabled;
+
+    partial void OnTelegramEnabledChanged(bool value) => OnPropertyChanged(nameof(NeedsOnboarding));
+
+    partial void OnDiscordEnabledChanged(bool value) => OnPropertyChanged(nameof(NeedsOnboarding));
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -386,6 +419,15 @@ public sealed partial class SettingsViewModel : ObservableObject
         NotifyOnNetworkOffline = NotifyOnNetworkOffline,
         NotifyOnNetworkOnline = NotifyOnNetworkOnline,
         NotifyOnSystemResume = NotifyOnSystemResume,
+        NotifyOnSessionLock = NotifyOnSessionLock,
+        NotifyOnSessionUnlock = NotifyOnSessionUnlock,
+        NotifyOnLowDiskSpace = NotifyOnLowDiskSpace,
+        NotifyOnBatteryLow = NotifyOnBatteryLow,
+        NotifyOnAcPowerLost = NotifyOnAcPowerLost,
+        NotifyOnAcPowerRestored = NotifyOnAcPowerRestored,
+        LowDiskSpaceThresholdPercent = LowDiskSpaceThresholdPercent,
+        BatteryLowThresholdPercent = BatteryLowThresholdPercent,
+        AlertCooldownMinutes = AlertCooldownMinutes,
         HeartbeatEnabled = HeartbeatEnabled,
         HeartbeatIntervalMinutes = HeartbeatIntervalMinutes,
         QuietHoursEnabled = QuietHoursEnabled,
@@ -414,6 +456,15 @@ public sealed partial class SettingsViewModel : ObservableObject
         NotifyOnNetworkOffline = settings.NotifyOnNetworkOffline;
         NotifyOnNetworkOnline = settings.NotifyOnNetworkOnline;
         NotifyOnSystemResume = settings.NotifyOnSystemResume;
+        NotifyOnSessionLock = settings.NotifyOnSessionLock;
+        NotifyOnSessionUnlock = settings.NotifyOnSessionUnlock;
+        NotifyOnLowDiskSpace = settings.NotifyOnLowDiskSpace;
+        NotifyOnBatteryLow = settings.NotifyOnBatteryLow;
+        NotifyOnAcPowerLost = settings.NotifyOnAcPowerLost;
+        NotifyOnAcPowerRestored = settings.NotifyOnAcPowerRestored;
+        LowDiskSpaceThresholdPercent = settings.LowDiskSpaceThresholdPercent;
+        BatteryLowThresholdPercent = settings.BatteryLowThresholdPercent;
+        AlertCooldownMinutes = settings.AlertCooldownMinutes;
         HeartbeatEnabled = settings.HeartbeatEnabled;
         HeartbeatIntervalMinutes = settings.HeartbeatIntervalMinutes;
         QuietHoursEnabled = settings.QuietHoursEnabled;

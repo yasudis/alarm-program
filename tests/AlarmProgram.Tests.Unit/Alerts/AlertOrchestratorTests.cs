@@ -158,6 +158,8 @@ public class AlertOrchestratorTests
             new FakeSettingsStore(ValidTelegramSettings()),
             new FakeAlertJournal(),
             outbox,
+            new AlertMuteState(),
+            new NullWindowsEventLogWriter(),
             Options.Create(new MonitoringOptions { DeduplicationWindowSeconds = 180 }),
             NullLogger<AlertOrchestrator>.Instance);
 
@@ -181,6 +183,8 @@ public class AlertOrchestratorTests
             new FakeSettingsStore(settings),
             new FakeAlertJournal(),
             new FakeAlertOutbox(),
+            new AlertMuteState(),
+            new NullWindowsEventLogWriter(),
             Options.Create(new MonitoringOptions { DeduplicationWindowSeconds = 180 }),
             NullLogger<AlertOrchestrator>.Instance);
 
@@ -266,6 +270,17 @@ public class AlertOrchestratorTests
 
         public Task UpdateAttemptAsync(string id, string? error, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+    }
+
+    private sealed class NullWindowsEventLogWriter : IWindowsEventLogWriter
+    {
+        public void WriteWarning(string message)
+        {
+        }
+
+        public void WriteError(string message)
+        {
+        }
     }
 
     private sealed class CapturingChannel : INotificationChannel

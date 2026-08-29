@@ -2,9 +2,9 @@ using AlarmProgram.Domain;
 
 namespace AlarmProgram.Application.Abstractions;
 
-public interface IPowerEventMonitor : IDisposable
+public interface IDiskSpaceMonitor : IDisposable
 {
-    event EventHandler<MachineEvent>? PowerEventDetected;
+    event EventHandler<MachineEvent>? DiskEventDetected;
 
     void Start();
 

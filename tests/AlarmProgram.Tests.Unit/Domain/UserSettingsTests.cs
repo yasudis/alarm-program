@@ -151,4 +151,61 @@ public class UserSettingsTests
         Assert.True(settings.IsEventEnabled(MachineEventType.SystemResume));
         Assert.True(settings.IsEventEnabled(MachineEventType.UserLogoff));
     }
+
+    [Fact]
+    public void ParseTelegramChatIds_splits_comma_separated_values()
+    {
+        var ids = UserSettings.ParseTelegramChatIds("42, -100123, @mychannel");
+
+        Assert.Equal(new[] { "42", "-100123", "@mychannel" }, ids);
+    }
+
+    [Fact]
+    public void Validate_accepts_multiple_telegram_chat_ids()
+    {
+        var settings = new UserSettings
+        {
+            TelegramEnabled = true,
+            TelegramBotToken = "123456789:AAExampleTelegramBotTokenValue123456",
+            TelegramChatId = "42, -1001234567890"
+        };
+
+        Assert.True(settings.IsValid);
+        Assert.Equal(2, settings.GetTelegramChatIds().Count);
+    }
+
+    [Fact]
+    public void Validate_rejects_invalid_chat_id_in_list()
+    {
+        var settings = new UserSettings
+        {
+            TelegramEnabled = true,
+            TelegramBotToken = "123456789:AAExampleTelegramBotTokenValue123456",
+            TelegramChatId = "42, not-a-chat"
+        };
+
+        Assert.False(settings.IsValid);
+        Assert.Contains(settings.Validate(), error => error.Contains("chat id", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void IsEventEnabled_covers_session_disk_and_power_flags()
+    {
+        var settings = new UserSettings
+        {
+            NotifyOnSessionLock = true,
+            NotifyOnSessionUnlock = false,
+            NotifyOnLowDiskSpace = true,
+            NotifyOnBatteryLow = false,
+            NotifyOnAcPowerLost = true,
+            NotifyOnAcPowerRestored = false
+        };
+
+        Assert.True(settings.IsEventEnabled(MachineEventType.SessionLock));
+        Assert.False(settings.IsEventEnabled(MachineEventType.SessionUnlock));
+        Assert.True(settings.IsEventEnabled(MachineEventType.LowDiskSpace));
+        Assert.False(settings.IsEventEnabled(MachineEventType.BatteryLow));
+        Assert.True(settings.IsEventEnabled(MachineEventType.AcPowerLost));
+        Assert.False(settings.IsEventEnabled(MachineEventType.AcPowerRestored));
+    }
 }

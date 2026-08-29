@@ -20,6 +20,12 @@ public class AlertFormatterTests
     [InlineData(MachineEventType.NetworkOffline, "Сеть недоступна")]
     [InlineData(MachineEventType.NetworkOnline, "Сеть восстановлена")]
     [InlineData(MachineEventType.SystemResume, "ПК вышел из режима сна")]
+    [InlineData(MachineEventType.SessionLock, "Экран заблокирован")]
+    [InlineData(MachineEventType.SessionUnlock, "Экран разблокирован")]
+    [InlineData(MachineEventType.LowDiskSpace, "Мало места на диске")]
+    [InlineData(MachineEventType.BatteryLow, "Низкий заряд батареи")]
+    [InlineData(MachineEventType.AcPowerLost, "Переход на батарею")]
+    [InlineData(MachineEventType.AcPowerRestored, "Питание от сети восстановлено")]
     public void Format_uses_stable_subject_and_includes_host_and_timestamp(
         MachineEventType eventType,
         string expectedSubject)

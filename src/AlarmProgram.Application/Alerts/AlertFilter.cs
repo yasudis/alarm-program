@@ -4,7 +4,15 @@ namespace AlarmProgram.Application.Alerts;
 
 public sealed class AlertFilter
 {
-    public bool ShouldNotify(MachineEvent machineEvent, UserSettings settings)
+    public bool ShouldNotify(MachineEvent machineEvent, UserSettings settings) =>
+        ShouldNotify(machineEvent, settings, muteState: null, lastSentOfType: null);
+
+    public bool ShouldNotify(
+        MachineEvent machineEvent,
+        UserSettings settings,
+        IAlertMuteState? muteState,
+        DateTimeOffset? lastSentOfType,
+        DateTimeOffset? now = null)
     {
         ArgumentNullException.ThrowIfNull(machineEvent);
         ArgumentNullException.ThrowIfNull(settings);
@@ -24,8 +32,23 @@ public sealed class AlertFilter
             return false;
         }
 
-        if (machineEvent.Type != MachineEventType.UnexpectedShutdown
-            && settings.IsWithinQuietHours(machineEvent.OccurredAt))
+        var timestamp = now ?? DateTimeOffset.UtcNow;
+        var isCritical = machineEvent.Type == MachineEventType.UnexpectedShutdown;
+
+        if (!isCritical && settings.IsWithinQuietHours(machineEvent.OccurredAt))
+        {
+            return false;
+        }
+
+        if (!isCritical && muteState is not null && muteState.IsActiveAt(timestamp))
+        {
+            return false;
+        }
+
+        if (!isCritical
+            && settings.AlertCooldownMinutes > 0
+            && lastSentOfType is { } lastSent
+            && timestamp - lastSent < TimeSpan.FromMinutes(settings.AlertCooldownMinutes))
         {
             return false;
         }

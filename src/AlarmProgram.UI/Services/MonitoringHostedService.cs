@@ -16,6 +16,10 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
     private readonly ISettingsStore _settingsStore;
     private readonly INetworkMonitor _networkMonitor;
     private readonly IPowerEventMonitor _powerEventMonitor;
+    private readonly ISessionMonitor _sessionMonitor;
+    private readonly IDiskSpaceMonitor _diskSpaceMonitor;
+    private readonly IAlertMuteState _muteState;
+    private readonly IWindowsEventLogWriter _windowsEventLogWriter;
     private readonly MonitoringOptions _monitoringOptions;
     private readonly ILogger<MonitoringHostedService> _logger;
     private readonly object _stateLock = new();
@@ -30,6 +34,10 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         ISettingsStore settingsStore,
         INetworkMonitor networkMonitor,
         IPowerEventMonitor powerEventMonitor,
+        ISessionMonitor sessionMonitor,
+        IDiskSpaceMonitor diskSpaceMonitor,
+        IAlertMuteState muteState,
+        IWindowsEventLogWriter windowsEventLogWriter,
         IOptions<MonitoringOptions> monitoringOptions,
         ILogger<MonitoringHostedService> logger)
     {
@@ -39,8 +47,13 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _settingsStore = settingsStore;
         _networkMonitor = networkMonitor;
         _powerEventMonitor = powerEventMonitor;
+        _sessionMonitor = sessionMonitor;
+        _diskSpaceMonitor = diskSpaceMonitor;
+        _muteState = muteState;
+        _windowsEventLogWriter = windowsEventLogWriter;
         _monitoringOptions = monitoringOptions.Value;
         _logger = logger;
+        _muteState.Changed += (_, _) => RaiseStatusChanged();
     }
 
     public bool IsRunning
@@ -69,17 +82,30 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
     {
         get
         {
+            bool isRunning;
+            bool isPaused;
             lock (_stateLock)
             {
-                if (!_isRunning)
-                {
-                    return "Мониторинг останавливается…";
-                }
-
-                return _isPaused
-                    ? "Мониторинг на паузе"
-                    : "Мониторинг включен";
+                isRunning = _isRunning;
+                isPaused = _isPaused;
             }
+
+            if (!isRunning)
+            {
+                return "Мониторинг останавливается…";
+            }
+
+            if (isPaused)
+            {
+                return "Мониторинг на паузе";
+            }
+
+            if (_muteState.IsMuted)
+            {
+                return $"Мониторинг включен (тишина до {_muteState.MutedUntil:HH:mm})";
+            }
+
+            return "Мониторинг включен";
         }
     }
 
@@ -115,8 +141,12 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
 
         _networkMonitor.NetworkEventDetected += OnNetworkEventDetected;
         _powerEventMonitor.PowerEventDetected += OnPowerEventDetected;
+        _sessionMonitor.SessionEventDetected += OnExternalEventDetected;
+        _diskSpaceMonitor.DiskEventDetected += OnExternalEventDetected;
         _networkMonitor.Start();
         _powerEventMonitor.Start();
+        _sessionMonitor.Start();
+        _diskSpaceMonitor.Start();
 
         SetRunning(true);
         await TryRecoverPreviousShutdownAsync(startupAt, stoppingToken);
@@ -134,6 +164,9 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
                     await _orchestrator.ProcessAsync(since, stoppingToken);
                     since = DateTimeOffset.UtcNow - pollInterval;
                     await TrySendHeartbeatAsync(stoppingToken);
+                    var settings = await _settingsStore.LoadAsync(stoppingToken);
+                    _diskSpaceMonitor.Poll(settings);
+                    _powerEventMonitor.Poll(settings);
                     await _orchestrator.FlushOutboxAsync(stoppingToken);
                 }
             }
@@ -144,6 +177,7 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Ошибка фонового мониторинга системных событий");
+                _windowsEventLogWriter.WriteError($"Ошибка фонового мониторинга: {ex.GetType().Name}: {ex.Message}");
             }
 
             try
@@ -158,6 +192,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
 
         _networkMonitor.NetworkEventDetected -= OnNetworkEventDetected;
         _powerEventMonitor.PowerEventDetected -= OnPowerEventDetected;
+        _sessionMonitor.SessionEventDetected -= OnExternalEventDetected;
+        _diskSpaceMonitor.DiskEventDetected -= OnExternalEventDetected;
         SetRunning(false);
         _logger.LogInformation("Фоновый мониторинг событий остановлен");
     }
@@ -166,6 +202,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
     {
         _networkMonitor.Dispose();
         _powerEventMonitor.Dispose();
+        _sessionMonitor.Dispose();
+        _diskSpaceMonitor.Dispose();
         base.Dispose();
     }
 
@@ -189,7 +227,10 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         });
     }
 
-    private void OnPowerEventDetected(object? sender, MachineEvent machineEvent)
+    private void OnPowerEventDetected(object? sender, MachineEvent machineEvent) =>
+        OnExternalEventDetected(sender, machineEvent);
+
+    private void OnExternalEventDetected(object? sender, MachineEvent machineEvent)
     {
         _ = Task.Run(async () =>
         {
@@ -204,7 +245,9 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ошибка обработки события питания {EventType}", machineEvent.Type);
+                _logger.LogError(ex, "Ошибка обработки события {EventType}", machineEvent.Type);
+                _windowsEventLogWriter.WriteError(
+                    $"Ошибка обработки {machineEvent.Type}: {ex.GetType().Name}: {ex.Message}");
             }
         });
     }

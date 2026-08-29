@@ -76,6 +76,12 @@ public partial class App : System.Windows.Application
             settings.TelegramEnabled,
             settings.DiscordEnabled);
 
+        if (!settings.HasEnabledChannel)
+        {
+            _host.Services.GetRequiredService<IWindowsEventLogWriter>()
+                .WriteWarning("Alarm Program запущен без настроенных каналов уведомлений.");
+        }
+
         var mainViewModel = _host.Services.GetRequiredService<MainViewModel>();
         await mainViewModel.InitializeAsync();
         _trayIconService = _host.Services.GetRequiredService<TrayIconService>();
