@@ -22,6 +22,7 @@ public class EventClassifierTests
     [InlineData(7002, MachineEventType.UserLogoff)]
     [InlineData(4625, MachineEventType.FailedLogon)]
     [InlineData(1000, MachineEventType.ApplicationCrash)]
+    [InlineData(1116, MachineEventType.DefenderThreat)]
     public void Classify_maps_known_event_ids(int eventId, MachineEventType expectedType)
     {
         var result = _classifier.Classify(CreateRaw(eventId));
@@ -89,11 +90,60 @@ public class EventClassifierTests
     }
 
     [Fact]
+    public void Classify_maps_bugcheck_1001_to_blue_screen()
+    {
+        var result = _classifier.Classify(CreateRaw(1001, "The computer has rebooted from a bugcheck.", "Microsoft-Windows-WER-SystemErrorReporting"));
+
+        Assert.NotNull(result);
+        Assert.Equal(MachineEventType.BlueScreen, result.Type);
+    }
+
+    [Fact]
+    public void Classify_ignores_1001_from_unrelated_source()
+    {
+        Assert.Null(_classifier.Classify(CreateRaw(1001, "unrelated", "Microsoft-Windows-EventLog")));
+    }
+
+    [Fact]
+    public void Classify_maps_windows_update_20_to_failed_update()
+    {
+        var result = _classifier.Classify(CreateRaw(20, "Installation Failure", "Microsoft-Windows-WindowsUpdateClient"));
+
+        Assert.NotNull(result);
+        Assert.Equal(MachineEventType.WindowsUpdateFailed, result.Type);
+    }
+
+    [Fact]
+    public void Classify_ignores_event_20_from_other_sources()
+    {
+        Assert.Null(_classifier.Classify(CreateRaw(20, "something else", "Microsoft-Windows-EventLog")));
+    }
+
+    [Theory]
+    [InlineData("A member was added to security-enabled local group Administrators")]
+    [InlineData("Группа Администраторы")]
+    [InlineData("Target SID: S-1-5-32-544")]
+    public void Classify_maps_4732_administrators_membership(string message)
+    {
+        var result = _classifier.Classify(CreateRaw(4732, message, "Microsoft-Windows-Security-Auditing"));
+
+        Assert.NotNull(result);
+        Assert.Equal(MachineEventType.AdminGroupChanged, result.Type);
+    }
+
+    [Fact]
+    public void Classify_ignores_4732_for_other_groups()
+    {
+        Assert.Null(_classifier.Classify(CreateRaw(4732, "A member was added to Users", "Microsoft-Windows-Security-Auditing")));
+    }
+
+    [Fact]
     public void Classify_covers_all_windows_event_log_candidate_ids()
     {
         foreach (var eventId in WindowsEventLogReader.CandidateEventIds)
         {
-            var result = _classifier.Classify(CreateRaw(eventId, "initiated the restart of computer"));
+            var (source, message) = SampleFor(eventId);
+            var result = _classifier.Classify(CreateRaw(eventId, message, source));
             Assert.NotNull(result);
             Assert.NotEqual(MachineEventType.Unknown, result.Type);
         }
@@ -105,12 +155,22 @@ public class EventClassifierTests
         Assert.Throws<ArgumentNullException>(() => _classifier.Classify(null!));
     }
 
-    private static RawSystemEvent CreateRaw(int eventId, string? message = "sample") => new()
+    private static RawSystemEvent CreateRaw(int eventId, string? message = "sample", string source = "Microsoft-Windows-EventLog") => new()
     {
         OccurredAt = new DateTimeOffset(2026, 8, 24, 10, 30, 0, TimeSpan.Zero),
         EventId = eventId,
-        Source = "Microsoft-Windows-EventLog",
+        Source = source,
         Message = message,
         HostName = "TEST-PC"
+    };
+
+    private static (string Source, string Message) SampleFor(int eventId) => eventId switch
+    {
+        20 => ("Microsoft-Windows-WindowsUpdateClient", "Installation Failure"),
+        1001 => ("BugCheck", "The computer has rebooted from a bugcheck."),
+        1116 => ("Microsoft-Windows-Windows Defender", "Antimalware malware detected"),
+        4732 => ("Microsoft-Windows-Security-Auditing", "A member was added to Administrators"),
+        1074 => ("Microsoft-Windows-EventLog", "initiated the restart of computer"),
+        _ => ("Microsoft-Windows-EventLog", "initiated the restart of computer")
     };
 }

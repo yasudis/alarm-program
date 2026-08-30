@@ -111,6 +111,22 @@ public sealed class UserSettings
 
     public bool NotifyOnRebootPending { get; set; } = true;
 
+    public bool NotifyOnBlueScreen { get; set; } = true;
+
+    public bool NotifyOnWindowsUpdateFailed { get; set; } = true;
+
+    public bool NotifyOnDefenderThreat { get; set; } = true;
+
+    public bool NotifyOnAdminGroupChanged { get; set; } = true;
+
+    public bool NotifyOnHostUnreachable { get; set; }
+
+    public string WatchedHosts { get; set; } = string.Empty;
+
+    public bool NotifyOnHttpEndpointDown { get; set; }
+
+    public string WatchedHttpEndpoints { get; set; } = string.Empty;
+
     public bool PlaySoundOnCriticalAlerts { get; set; } = true;
 
     public bool ShowTrayBalloonOnCriticalAlerts { get; set; } = true;
@@ -174,6 +190,12 @@ public sealed class UserSettings
         MachineEventType.FailedLogon => NotifyOnFailedLogon,
         MachineEventType.ApplicationCrash => NotifyOnApplicationCrash,
         MachineEventType.RebootPending => NotifyOnRebootPending,
+        MachineEventType.BlueScreen => NotifyOnBlueScreen,
+        MachineEventType.WindowsUpdateFailed => NotifyOnWindowsUpdateFailed,
+        MachineEventType.DefenderThreat => NotifyOnDefenderThreat,
+        MachineEventType.AdminGroupChanged => NotifyOnAdminGroupChanged,
+        MachineEventType.HostUnreachable => NotifyOnHostUnreachable,
+        MachineEventType.HttpEndpointDown => NotifyOnHttpEndpointDown,
         _ => false
     };
 
@@ -182,6 +204,10 @@ public sealed class UserSettings
     public IReadOnlyList<string> GetWatchedProcessNames() => ParseWatchedProcessNames(WatchedProcessNames);
 
     public IReadOnlyList<string> GetWatchedServiceNames() => ParseWatchedServiceNames(WatchedServiceNames);
+
+    public IReadOnlyList<string> GetWatchedHosts() => ParseWatchedHosts(WatchedHosts);
+
+    public IReadOnlyList<string> GetWatchedHttpEndpoints() => ParseWatchedHttpEndpoints(WatchedHttpEndpoints);
 
     public IReadOnlyList<string> GetSmtpRecipients() => ParseEmailAddresses(SmtpTo);
 
@@ -252,6 +278,70 @@ public sealed class UserSettings
         }
 
         return name.Trim().Trim('"');
+    }
+
+    public static IReadOnlyList<string> ParseWatchedHosts(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return [];
+        }
+
+        return raw
+            .Split([',', ';', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(NormalizeHost)
+            .Where(host => !string.IsNullOrWhiteSpace(host))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public static IReadOnlyList<string> ParseWatchedHttpEndpoints(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return [];
+        }
+
+        return raw
+            .Split([',', ';', '\n', '\r', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(NormalizeHttpEndpoint)
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public static string NormalizeHost(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = value.Trim().Trim('"');
+        if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+            && !string.IsNullOrWhiteSpace(uri.Host))
+        {
+            return uri.IsDefaultPort ? uri.Host : $"{uri.Host}:{uri.Port}";
+        }
+
+        var slash = trimmed.IndexOf('/');
+        if (slash >= 0)
+        {
+            trimmed = trimmed[..slash];
+        }
+
+        return trimmed.Trim();
+    }
+
+    public static string NormalizeHttpEndpoint(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return value.Trim().Trim('"');
     }
 
     public static IReadOnlyList<string> ParseEmailAddresses(string? raw)
@@ -415,6 +505,40 @@ public sealed class UserSettings
             }
         }
 
+        if (NotifyOnHostUnreachable)
+        {
+            var hosts = GetWatchedHosts();
+            if (hosts.Count == 0)
+            {
+                errors.Add("Укажите хотя бы один хост для ping watchdog.");
+            }
+            else if (hosts.Count > 10)
+            {
+                errors.Add("Можно указать не более 10 хостов.");
+            }
+            else if (hosts.Any(host => !IsValidWatchedHost(host)))
+            {
+                errors.Add("Некорректный хост. Укажите IP или имя, например 8.8.8.8 или nas.local.");
+            }
+        }
+
+        if (NotifyOnHttpEndpointDown)
+        {
+            var endpoints = GetWatchedHttpEndpoints();
+            if (endpoints.Count == 0)
+            {
+                errors.Add("Укажите хотя бы один HTTP(S) URL для проверки.");
+            }
+            else if (endpoints.Count > 10)
+            {
+                errors.Add("Можно указать не более 10 HTTP-адресов.");
+            }
+            else if (endpoints.Any(url => !IsValidHttpEndpoint(url)))
+            {
+                errors.Add("Некорректный HTTP URL. Укажите http:// или https:// адрес.");
+            }
+        }
+
         if (HeartbeatEnabled && (HeartbeatIntervalMinutes < 5 || HeartbeatIntervalMinutes > 1440))
         {
             errors.Add("Интервал heartbeat должен быть от 5 до 1440 минут.");
@@ -522,4 +646,27 @@ public sealed class UserSettings
 
     private static bool IsValidEmail(string value) =>
         value.Length is >= 5 and <= 254 && EmailPattern.IsMatch(value);
+
+    private static bool IsValidWatchedHost(string host) =>
+        host.Length is >= 1 and <= 253
+        && !host.Contains('/')
+        && !host.Contains('\\')
+        && !host.Contains(' ')
+        && host.All(ch => char.IsLetterOrDigit(ch) || ch is '.' or '-' or ':' or '[' or ']');
+
+    private static bool IsValidHttpEndpoint(string url)
+    {
+        if (url.Length is < 10 or > 2048)
+        {
+            return false;
+        }
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        return (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+               && !string.IsNullOrWhiteSpace(uri.Host);
+    }
 }

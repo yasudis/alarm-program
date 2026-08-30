@@ -180,6 +180,30 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _notifyOnRebootPending = true;
 
     [ObservableProperty]
+    private bool _notifyOnBlueScreen = true;
+
+    [ObservableProperty]
+    private bool _notifyOnWindowsUpdateFailed = true;
+
+    [ObservableProperty]
+    private bool _notifyOnDefenderThreat = true;
+
+    [ObservableProperty]
+    private bool _notifyOnAdminGroupChanged = true;
+
+    [ObservableProperty]
+    private bool _notifyOnHostUnreachable;
+
+    [ObservableProperty]
+    private string _watchedHosts = string.Empty;
+
+    [ObservableProperty]
+    private bool _notifyOnHttpEndpointDown;
+
+    [ObservableProperty]
+    private string _watchedHttpEndpoints = string.Empty;
+
+    [ObservableProperty]
     private bool _playSoundOnCriticalAlerts = true;
 
     [ObservableProperty]
@@ -547,6 +571,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         NotifyOnFailedLogon = NotifyOnFailedLogon,
         NotifyOnApplicationCrash = NotifyOnApplicationCrash,
         NotifyOnRebootPending = NotifyOnRebootPending,
+        NotifyOnBlueScreen = NotifyOnBlueScreen,
+        NotifyOnWindowsUpdateFailed = NotifyOnWindowsUpdateFailed,
+        NotifyOnDefenderThreat = NotifyOnDefenderThreat,
+        NotifyOnAdminGroupChanged = NotifyOnAdminGroupChanged,
+        NotifyOnHostUnreachable = NotifyOnHostUnreachable,
+        WatchedHosts = WatchedHosts.Trim(),
+        NotifyOnHttpEndpointDown = NotifyOnHttpEndpointDown,
+        WatchedHttpEndpoints = WatchedHttpEndpoints.Trim(),
         PlaySoundOnCriticalAlerts = PlaySoundOnCriticalAlerts,
         ShowTrayBalloonOnCriticalAlerts = ShowTrayBalloonOnCriticalAlerts,
         LowDiskSpaceThresholdPercent = LowDiskSpaceThresholdPercent,
@@ -614,6 +646,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         NotifyOnFailedLogon = settings.NotifyOnFailedLogon;
         NotifyOnApplicationCrash = settings.NotifyOnApplicationCrash;
         NotifyOnRebootPending = settings.NotifyOnRebootPending;
+        NotifyOnBlueScreen = settings.NotifyOnBlueScreen;
+        NotifyOnWindowsUpdateFailed = settings.NotifyOnWindowsUpdateFailed;
+        NotifyOnDefenderThreat = settings.NotifyOnDefenderThreat;
+        NotifyOnAdminGroupChanged = settings.NotifyOnAdminGroupChanged;
+        NotifyOnHostUnreachable = settings.NotifyOnHostUnreachable;
+        WatchedHosts = settings.WatchedHosts ?? string.Empty;
+        NotifyOnHttpEndpointDown = settings.NotifyOnHttpEndpointDown;
+        WatchedHttpEndpoints = settings.WatchedHttpEndpoints ?? string.Empty;
         PlaySoundOnCriticalAlerts = settings.PlaySoundOnCriticalAlerts;
         ShowTrayBalloonOnCriticalAlerts = settings.ShowTrayBalloonOnCriticalAlerts;
         LowDiskSpaceThresholdPercent = settings.LowDiskSpaceThresholdPercent;

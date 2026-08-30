@@ -38,6 +38,12 @@ public class AlertFormatterTests
     [InlineData(MachineEventType.FailedLogon, "Неудачный вход в Windows")]
     [InlineData(MachineEventType.ApplicationCrash, "Падение приложения")]
     [InlineData(MachineEventType.RebootPending, "Требуется перезагрузка Windows")]
+    [InlineData(MachineEventType.BlueScreen, "Синий экран / BugCheck")]
+    [InlineData(MachineEventType.WindowsUpdateFailed, "Сбой установки обновления Windows")]
+    [InlineData(MachineEventType.DefenderThreat, "Обнаружена угроза Windows Defender")]
+    [InlineData(MachineEventType.AdminGroupChanged, "Изменение группы Администраторы")]
+    [InlineData(MachineEventType.HostUnreachable, "Хост недоступен")]
+    [InlineData(MachineEventType.HttpEndpointDown, "HTTP-эндпоинт недоступен")]
     public void Format_uses_stable_subject_and_includes_host_and_timestamp(
         MachineEventType eventType,
         string expectedSubject)

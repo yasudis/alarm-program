@@ -25,6 +25,9 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
     private readonly IUsbDeviceMonitor _usbDeviceMonitor;
     private readonly IResourceMonitor _resourceMonitor;
     private readonly IPendingRebootMonitor _pendingRebootMonitor;
+    private readonly IHostWatchdog _hostWatchdog;
+    private readonly IHttpEndpointWatchdog _httpEndpointWatchdog;
+    private readonly ISystemSnapshotProvider _systemSnapshotProvider;
     private readonly IAlertMuteState _muteState;
     private readonly IWindowsEventLogWriter _windowsEventLogWriter;
     private readonly MonitoringOptions _monitoringOptions;
@@ -50,6 +53,9 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         IUsbDeviceMonitor usbDeviceMonitor,
         IResourceMonitor resourceMonitor,
         IPendingRebootMonitor pendingRebootMonitor,
+        IHostWatchdog hostWatchdog,
+        IHttpEndpointWatchdog httpEndpointWatchdog,
+        ISystemSnapshotProvider systemSnapshotProvider,
         IAlertMuteState muteState,
         IWindowsEventLogWriter windowsEventLogWriter,
         IOptions<MonitoringOptions> monitoringOptions,
@@ -69,6 +75,9 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _usbDeviceMonitor = usbDeviceMonitor;
         _resourceMonitor = resourceMonitor;
         _pendingRebootMonitor = pendingRebootMonitor;
+        _hostWatchdog = hostWatchdog;
+        _httpEndpointWatchdog = httpEndpointWatchdog;
+        _systemSnapshotProvider = systemSnapshotProvider;
         _muteState = muteState;
         _windowsEventLogWriter = windowsEventLogWriter;
         _monitoringOptions = monitoringOptions.Value;
@@ -168,6 +177,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _usbDeviceMonitor.UsbEventDetected += OnExternalEventDetected;
         _resourceMonitor.ResourceEventDetected += OnExternalEventDetected;
         _pendingRebootMonitor.RebootEventDetected += OnExternalEventDetected;
+        _hostWatchdog.HostEventDetected += OnExternalEventDetected;
+        _httpEndpointWatchdog.HttpEventDetected += OnExternalEventDetected;
         _networkMonitor.Start();
         _powerEventMonitor.Start();
         _sessionMonitor.Start();
@@ -177,6 +188,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _usbDeviceMonitor.Start();
         _resourceMonitor.Start();
         _pendingRebootMonitor.Start();
+        _hostWatchdog.Start();
+        _httpEndpointWatchdog.Start();
 
         SetRunning(true);
         await TryRecoverPreviousShutdownAsync(startupAt, stoppingToken);
@@ -202,6 +215,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
                     _usbDeviceMonitor.Poll(settings);
                     _resourceMonitor.Poll(settings);
                     _pendingRebootMonitor.Poll(settings);
+                    await _hostWatchdog.PollAsync(settings, stoppingToken);
+                    await _httpEndpointWatchdog.PollAsync(settings, stoppingToken);
                     _powerEventMonitor.Poll(settings);
                     await TryPurgeJournalAsync(settings, stoppingToken);
                     await _orchestrator.FlushOutboxAsync(stoppingToken);
@@ -236,6 +251,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _usbDeviceMonitor.UsbEventDetected -= OnExternalEventDetected;
         _resourceMonitor.ResourceEventDetected -= OnExternalEventDetected;
         _pendingRebootMonitor.RebootEventDetected -= OnExternalEventDetected;
+        _hostWatchdog.HostEventDetected -= OnExternalEventDetected;
+        _httpEndpointWatchdog.HttpEventDetected -= OnExternalEventDetected;
         SetRunning(false);
         _logger.LogInformation("Фоновый мониторинг событий остановлен");
     }
@@ -251,6 +268,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _usbDeviceMonitor.Dispose();
         _resourceMonitor.Dispose();
         _pendingRebootMonitor.Dispose();
+        _hostWatchdog.Dispose();
+        _httpEndpointWatchdog.Dispose();
         base.Dispose();
     }
 
@@ -323,6 +342,7 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
             return;
         }
 
+        var snapshot = _systemSnapshotProvider.Capture(_networkMonitor.CurrentPrimaryIp);
         var heartbeat = new MachineEvent
         {
             Type = MachineEventType.Heartbeat,
@@ -330,7 +350,12 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
             Source = "AlarmProgram",
             EventId = null,
             HostName = Environment.MachineName,
-            Message = $"Периодический heartbeat каждые {intervalMinutes} мин. IP={_networkMonitor.CurrentPrimaryIp ?? "-"}"
+            Message = HeartbeatSnapshotBuilder.Format(
+                intervalMinutes,
+                snapshot.PrimaryIp,
+                snapshot.Uptime,
+                snapshot.SystemDriveFreePercent,
+                snapshot.MemoryUsedPercent)
         };
 
         await _orchestrator.ProcessMachineEventAsync(heartbeat, settings, cancellationToken);

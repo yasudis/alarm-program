@@ -106,4 +106,26 @@ public class SystemHealthRulesTests
         Assert.Equal(MachineEventType.RebootPending, alert.Type);
         Assert.Null(SystemHealthRules.RebootPending(false));
     }
+
+    [Fact]
+    public void HostUnreachable_returns_alert_only_when_host_is_down()
+    {
+        var down = SystemHealthRules.HostUnreachable("8.8.8.8", isReachable: false);
+        Assert.NotNull(down);
+        Assert.Equal(MachineEventType.HostUnreachable, down.Type);
+        Assert.Contains("8.8.8.8", down.Message);
+        Assert.Null(SystemHealthRules.HostUnreachable("8.8.8.8", isReachable: true));
+        Assert.Null(SystemHealthRules.HostUnreachable(" ", isReachable: false));
+    }
+
+    [Fact]
+    public void HttpEndpointDown_returns_alert_only_when_unhealthy()
+    {
+        var down = SystemHealthRules.HttpEndpointDown("https://example.com/health", isHealthy: false);
+        Assert.NotNull(down);
+        Assert.Equal(MachineEventType.HttpEndpointDown, down.Type);
+        Assert.Contains("https://example.com/health", down.Message);
+        Assert.Null(SystemHealthRules.HttpEndpointDown("https://example.com/health", isHealthy: true));
+        Assert.Null(SystemHealthRules.HttpEndpointDown(" ", isHealthy: false));
+    }
 }

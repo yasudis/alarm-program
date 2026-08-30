@@ -19,7 +19,8 @@ public sealed class EventClassifier : IEventClassifier
         [7001] = MachineEventType.UserLogon,
         [7002] = MachineEventType.UserLogoff,
         [4625] = MachineEventType.FailedLogon,
-        [1000] = MachineEventType.ApplicationCrash
+        [1000] = MachineEventType.ApplicationCrash,
+        [1116] = MachineEventType.DefenderThreat
     };
 
     public MachineEvent? Classify(RawSystemEvent rawEvent)
@@ -54,10 +55,42 @@ public sealed class EventClassifier : IEventClassifier
                 : MachineEventType.Shutdown;
         }
 
+        if (rawEvent.EventId == 1001 && IsBlueScreenSource(rawEvent.Source))
+        {
+            return MachineEventType.BlueScreen;
+        }
+
+        if (rawEvent.EventId == 20 && IsWindowsUpdateSource(rawEvent.Source))
+        {
+            return MachineEventType.WindowsUpdateFailed;
+        }
+
+        if (rawEvent.EventId == 4732 && IsAdministratorsGroupChange(rawEvent.Message))
+        {
+            return MachineEventType.AdminGroupChanged;
+        }
+
         return EventIdMap.TryGetValue(rawEvent.EventId, out var type)
             ? type
             : null;
     }
+
+    private static bool IsBlueScreenSource(string? source) =>
+        ContainsAny(
+            source,
+            "BugCheck",
+            "WER-SystemErrorReporting",
+            "Windows Error Reporting");
+
+    private static bool IsWindowsUpdateSource(string? source) =>
+        ContainsAny(source, "WindowsUpdate", "Windows Update");
+
+    private static bool IsAdministratorsGroupChange(string? message) =>
+        ContainsAny(
+            message,
+            "Administrators",
+            "Администратор",
+            "S-1-5-32-544");
 
     private static bool IsRestartMessage(string? message)
     {
@@ -75,8 +108,13 @@ public sealed class EventClassifier : IEventClassifier
             "рестарт");
     }
 
-    private static bool ContainsAny(string text, params string[] keywords)
+    private static bool ContainsAny(string? text, params string[] keywords)
     {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
         foreach (var keyword in keywords)
         {
             if (text.Contains(keyword, StringComparison.OrdinalIgnoreCase))

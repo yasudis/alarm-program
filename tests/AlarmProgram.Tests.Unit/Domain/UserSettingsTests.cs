@@ -295,6 +295,73 @@ public class UserSettingsTests
     }
 
     [Fact]
+    public void IsEventEnabled_covers_package9_security_and_watchdogs()
+    {
+        var settings = new UserSettings
+        {
+            NotifyOnBlueScreen = true,
+            NotifyOnWindowsUpdateFailed = false,
+            NotifyOnDefenderThreat = true,
+            NotifyOnAdminGroupChanged = false,
+            NotifyOnHostUnreachable = true,
+            NotifyOnHttpEndpointDown = false
+        };
+
+        Assert.True(settings.IsEventEnabled(MachineEventType.BlueScreen));
+        Assert.False(settings.IsEventEnabled(MachineEventType.WindowsUpdateFailed));
+        Assert.True(settings.IsEventEnabled(MachineEventType.DefenderThreat));
+        Assert.False(settings.IsEventEnabled(MachineEventType.AdminGroupChanged));
+        Assert.True(settings.IsEventEnabled(MachineEventType.HostUnreachable));
+        Assert.False(settings.IsEventEnabled(MachineEventType.HttpEndpointDown));
+    }
+
+    [Fact]
+    public void ParseWatchedHosts_strips_urls_and_dedupes()
+    {
+        var hosts = UserSettings.ParseWatchedHosts("8.8.8.8, https://nas.local/ping, NAS.local");
+
+        Assert.Equal(new[] { "8.8.8.8", "nas.local" }, hosts);
+    }
+
+    [Fact]
+    public void Validate_requires_hosts_when_ping_watchdog_enabled()
+    {
+        var settings = new UserSettings { NotifyOnHostUnreachable = true };
+
+        Assert.False(settings.IsValid);
+        Assert.Contains(settings.Validate(), error => error.Contains("хост", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Validate_accepts_ping_and_http_watchdogs()
+    {
+        var settings = new UserSettings
+        {
+            NotifyOnHostUnreachable = true,
+            WatchedHosts = "8.8.8.8, gateway.local",
+            NotifyOnHttpEndpointDown = true,
+            WatchedHttpEndpoints = "https://example.com/health, http://192.168.1.1"
+        };
+
+        Assert.True(settings.IsValid);
+        Assert.Equal(2, settings.GetWatchedHosts().Count);
+        Assert.Equal(2, settings.GetWatchedHttpEndpoints().Count);
+    }
+
+    [Fact]
+    public void Validate_rejects_invalid_http_endpoint()
+    {
+        var settings = new UserSettings
+        {
+            NotifyOnHttpEndpointDown = true,
+            WatchedHttpEndpoints = "ftp://example.com/health"
+        };
+
+        Assert.False(settings.IsValid);
+        Assert.Contains(settings.Validate(), error => error.Contains("HTTP URL", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void HasEnabledChannel_includes_email()
     {
         var settings = new UserSettings

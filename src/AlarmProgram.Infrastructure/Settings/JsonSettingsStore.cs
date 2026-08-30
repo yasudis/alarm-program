@@ -164,6 +164,14 @@ public sealed class JsonSettingsStore : ISettingsStore
         NotifyOnFailedLogon = dto.NotifyOnFailedLogon,
         NotifyOnApplicationCrash = dto.NotifyOnApplicationCrash,
         NotifyOnRebootPending = dto.NotifyOnRebootPending,
+        NotifyOnBlueScreen = dto.NotifyOnBlueScreen,
+        NotifyOnWindowsUpdateFailed = dto.NotifyOnWindowsUpdateFailed,
+        NotifyOnDefenderThreat = dto.NotifyOnDefenderThreat,
+        NotifyOnAdminGroupChanged = dto.NotifyOnAdminGroupChanged,
+        NotifyOnHostUnreachable = dto.NotifyOnHostUnreachable,
+        WatchedHosts = dto.WatchedHosts ?? string.Empty,
+        NotifyOnHttpEndpointDown = dto.NotifyOnHttpEndpointDown,
+        WatchedHttpEndpoints = dto.WatchedHttpEndpoints ?? string.Empty,
         PlaySoundOnCriticalAlerts = dto.PlaySoundOnCriticalAlerts,
         ShowTrayBalloonOnCriticalAlerts = dto.ShowTrayBalloonOnCriticalAlerts
     };
@@ -245,6 +253,14 @@ public sealed class JsonSettingsStore : ISettingsStore
         NotifyOnFailedLogon = settings.NotifyOnFailedLogon,
         NotifyOnApplicationCrash = settings.NotifyOnApplicationCrash,
         NotifyOnRebootPending = settings.NotifyOnRebootPending,
+        NotifyOnBlueScreen = settings.NotifyOnBlueScreen,
+        NotifyOnWindowsUpdateFailed = settings.NotifyOnWindowsUpdateFailed,
+        NotifyOnDefenderThreat = settings.NotifyOnDefenderThreat,
+        NotifyOnAdminGroupChanged = settings.NotifyOnAdminGroupChanged,
+        NotifyOnHostUnreachable = settings.NotifyOnHostUnreachable,
+        WatchedHosts = settings.WatchedHosts ?? string.Empty,
+        NotifyOnHttpEndpointDown = settings.NotifyOnHttpEndpointDown,
+        WatchedHttpEndpoints = settings.WatchedHttpEndpoints ?? string.Empty,
         PlaySoundOnCriticalAlerts = settings.PlaySoundOnCriticalAlerts,
         ShowTrayBalloonOnCriticalAlerts = settings.ShowTrayBalloonOnCriticalAlerts
     };

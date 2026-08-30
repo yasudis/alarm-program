@@ -31,5 +31,11 @@ public enum MachineEventType
     DailyDigest = 26,
     FailedLogon = 27,
     ApplicationCrash = 28,
-    RebootPending = 29
+    RebootPending = 29,
+    BlueScreen = 30,
+    WindowsUpdateFailed = 31,
+    DefenderThreat = 32,
+    AdminGroupChanged = 33,
+    HostUnreachable = 34,
+    HttpEndpointDown = 35
 }

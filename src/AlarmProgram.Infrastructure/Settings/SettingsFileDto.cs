@@ -124,6 +124,22 @@ internal sealed class SettingsFileDto
 
     public bool NotifyOnRebootPending { get; set; } = true;
 
+    public bool NotifyOnBlueScreen { get; set; } = true;
+
+    public bool NotifyOnWindowsUpdateFailed { get; set; } = true;
+
+    public bool NotifyOnDefenderThreat { get; set; } = true;
+
+    public bool NotifyOnAdminGroupChanged { get; set; } = true;
+
+    public bool NotifyOnHostUnreachable { get; set; }
+
+    public string WatchedHosts { get; set; } = string.Empty;
+
+    public bool NotifyOnHttpEndpointDown { get; set; }
+
+    public string WatchedHttpEndpoints { get; set; } = string.Empty;
+
     public bool PlaySoundOnCriticalAlerts { get; set; } = true;
 
     public bool ShowTrayBalloonOnCriticalAlerts { get; set; } = true;

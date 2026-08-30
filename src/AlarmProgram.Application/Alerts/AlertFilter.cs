@@ -35,7 +35,7 @@ public sealed class AlertFilter
         }
 
         var timestamp = now ?? DateTimeOffset.UtcNow;
-        var isCritical = machineEvent.Type == MachineEventType.UnexpectedShutdown;
+        var isCritical = LocalAlertRules.BypassesQuietHoursAndMute(machineEvent.Type);
 
         if (!isCritical && settings.IsWithinQuietHours(machineEvent.OccurredAt))
         {

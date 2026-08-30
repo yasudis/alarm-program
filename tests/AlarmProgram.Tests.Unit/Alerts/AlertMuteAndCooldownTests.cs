@@ -15,6 +15,8 @@ public class AlertMuteAndCooldownTests
 
         Assert.False(_filter.ShouldNotify(CreateEvent(MachineEventType.Startup), ValidSettings(), mute, lastSentOfType: null));
         Assert.True(_filter.ShouldNotify(CreateEvent(MachineEventType.UnexpectedShutdown), ValidSettings(), mute, lastSentOfType: null));
+        Assert.True(_filter.ShouldNotify(CreateEvent(MachineEventType.BlueScreen), ValidSettings(), mute, lastSentOfType: null));
+        Assert.True(_filter.ShouldNotify(CreateEvent(MachineEventType.DefenderThreat), ValidSettings(), mute, lastSentOfType: null));
     }
 
     [Fact]

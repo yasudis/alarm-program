@@ -58,6 +58,11 @@ public class WindowsEventLogReaderTests
         Assert.NotNull(provider.GetRequiredService<IUsbDeviceMonitor>());
         Assert.NotNull(provider.GetRequiredService<IServiceWatchdog>());
         Assert.NotNull(provider.GetRequiredService<IPendingRebootMonitor>());
+        Assert.NotNull(provider.GetRequiredService<IHostWatchdog>());
+        Assert.NotNull(provider.GetRequiredService<IHttpEndpointWatchdog>());
+        Assert.NotNull(provider.GetRequiredService<ISystemSnapshotProvider>());
+        Assert.NotNull(provider.GetRequiredService<IIcmpPingProbe>());
+        Assert.NotNull(provider.GetRequiredService<IHttpEndpointProbe>());
         Assert.NotNull(provider.GetRequiredService<ISmtpMailSender>());
         Assert.NotNull(provider.GetRequiredService<IAlertSoundPlayer>());
         Assert.NotNull(provider.GetRequiredService<ITrayBalloonNotifier>());

@@ -69,7 +69,12 @@ public class JsonSettingsStoreTests
             SmtpUseSsl = true,
             NotifyOnFailedLogon = true,
             NotifyOnApplicationCrash = false,
-            PlaySoundOnCriticalAlerts = false
+            PlaySoundOnCriticalAlerts = false,
+            NotifyOnBlueScreen = false,
+            NotifyOnHostUnreachable = true,
+            WatchedHosts = "8.8.8.8",
+            NotifyOnHttpEndpointDown = true,
+            WatchedHttpEndpoints = "https://example.com/health"
         };
 
         await store.SaveAsync(original);
@@ -114,6 +119,11 @@ public class JsonSettingsStoreTests
         Assert.True(restored.NotifyOnFailedLogon);
         Assert.False(restored.NotifyOnApplicationCrash);
         Assert.False(restored.PlaySoundOnCriticalAlerts);
+        Assert.False(restored.NotifyOnBlueScreen);
+        Assert.True(restored.NotifyOnHostUnreachable);
+        Assert.Equal("8.8.8.8", restored.WatchedHosts);
+        Assert.True(restored.NotifyOnHttpEndpointDown);
+        Assert.Equal("https://example.com/health", restored.WatchedHttpEndpoints);
     }
 
     [Fact]

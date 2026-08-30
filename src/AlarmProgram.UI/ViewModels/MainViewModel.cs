@@ -3,6 +3,7 @@ using System.Reflection;
 using AlarmProgram.Application.Abstractions;
 using AlarmProgram.Application.Alerts;
 using AlarmProgram.Application.Configuration;
+using AlarmProgram.Application.Journal;
 using AlarmProgram.Domain;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -58,6 +59,8 @@ public sealed partial class MainViewModel : ObservableObject
 
     public ObservableCollection<AlertJournalEntry> RecentAlerts { get; } = [];
 
+    private IReadOnlyList<AlertJournalEntry> _loadedJournalEntries = [];
+
     public bool IsMonitoringPaused => _monitoringController.IsPaused;
 
     public bool IsMuted => _muteState.IsMuted;
@@ -70,6 +73,11 @@ public sealed partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private string _snoozeUntilTime = "08:00";
+
+    [ObservableProperty]
+    private string _journalFilterText = string.Empty;
+
+    partial void OnJournalFilterTextChanged(string value) => ApplyJournalFilter();
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -305,16 +313,23 @@ public sealed partial class MainViewModel : ObservableObject
     {
         try
         {
-            var entries = await _alertJournal.GetRecentAsync(20, cancellationToken);
-            RecentAlerts.Clear();
-            foreach (var entry in entries)
-            {
-                RecentAlerts.Add(entry);
-            }
+            var entries = await _alertJournal.GetRecentAsync(50, cancellationToken);
+            _loadedJournalEntries = entries;
+            ApplyJournalFilter();
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Не удалось обновить журнал алертов");
+        }
+    }
+
+    private void ApplyJournalFilter()
+    {
+        var filtered = AlertJournalFilter.Apply(_loadedJournalEntries, JournalFilterText);
+        RecentAlerts.Clear();
+        foreach (var entry in filtered)
+        {
+            RecentAlerts.Add(entry);
         }
     }
 

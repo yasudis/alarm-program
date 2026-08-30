@@ -121,6 +121,12 @@ public sealed class AlertFormatter : IAlertFormatter
         MachineEventType.FailedLogon => "Неудачный вход в Windows",
         MachineEventType.ApplicationCrash => "Падение приложения",
         MachineEventType.RebootPending => "Требуется перезагрузка Windows",
+        MachineEventType.BlueScreen => "Синий экран / BugCheck",
+        MachineEventType.WindowsUpdateFailed => "Сбой установки обновления Windows",
+        MachineEventType.DefenderThreat => "Обнаружена угроза Windows Defender",
+        MachineEventType.AdminGroupChanged => "Изменение группы Администраторы",
+        MachineEventType.HostUnreachable => "Хост недоступен",
+        MachineEventType.HttpEndpointDown => "HTTP-эндпоинт недоступен",
         _ => "Событие ПК"
     };
 }

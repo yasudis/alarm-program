@@ -21,6 +21,9 @@ public class MachineEventTests
     [InlineData(MachineEventType.FailedLogon)]
     [InlineData(MachineEventType.ApplicationCrash)]
     [InlineData(MachineEventType.RebootPending)]
+    [InlineData(MachineEventType.BlueScreen)]
+    [InlineData(MachineEventType.HostUnreachable)]
+    [InlineData(MachineEventType.HttpEndpointDown)]
     public void MachineEvent_supports_core_event_types(MachineEventType eventType)
     {
         var machineEvent = new MachineEvent

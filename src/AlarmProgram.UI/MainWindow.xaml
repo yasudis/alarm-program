@@ -228,6 +228,24 @@
                         <CheckBox Margin="0,0,16,8"
                                   Content="Reboot pending"
                                   IsChecked="{Binding Settings.NotifyOnRebootPending}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Blue screen / BugCheck"
+                                  IsChecked="{Binding Settings.NotifyOnBlueScreen}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Windows Update failed"
+                                  IsChecked="{Binding Settings.NotifyOnWindowsUpdateFailed}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Defender threat"
+                                  IsChecked="{Binding Settings.NotifyOnDefenderThreat}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Admin group changed"
+                                  IsChecked="{Binding Settings.NotifyOnAdminGroupChanged}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Host unreachable"
+                                  IsChecked="{Binding Settings.NotifyOnHostUnreachable}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="HTTP endpoint down"
+                                  IsChecked="{Binding Settings.NotifyOnHttpEndpointDown}" />
                     </WrapPanel>
 
                     <TextBlock Margin="0,8,0,0"
@@ -265,7 +283,7 @@
                     </StackPanel>
 
                     <CheckBox Margin="0,12,0,0"
-                              Content="Тихие часы (кроме unexpected shutdown)"
+                              Content="Тихие часы (кроме критичных: unexpected / BSOD / Defender)"
                               IsChecked="{Binding Settings.QuietHoursEnabled}" />
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <TextBlock VerticalAlignment="Center" Text="С" />
@@ -334,6 +352,26 @@
                                Text="Service Name через запятую: Spooler, wuauserv, MSSQLSERVER" />
                     <TextBox Margin="0,8,0,0"
                              Text="{Binding Settings.WatchedServiceNames, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Margin="0,12,0,0"
+                               FontWeight="SemiBold"
+                               Text="Watchdog ping-хостов" />
+                    <TextBlock Margin="0,4,0,0"
+                               Foreground="#FF666666"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Text="IP или имена через запятую: 8.8.8.8, nas.local, gateway" />
+                    <TextBox Margin="0,8,0,0"
+                             Text="{Binding Settings.WatchedHosts, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Margin="0,12,0,0"
+                               FontWeight="SemiBold"
+                               Text="Watchdog HTTP-эндпоинтов" />
+                    <TextBlock Margin="0,4,0,0"
+                               Foreground="#FF666666"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Text="URL через запятую: https://example.com/health, http://192.168.1.1" />
+                    <TextBox Margin="0,8,0,0"
+                             Text="{Binding Settings.WatchedHttpEndpoints, UpdateSourceTrigger=PropertyChanged}" />
 
                     <TextBlock Margin="0,12,0,0"
                                FontWeight="SemiBold"
@@ -423,10 +461,21 @@
                                 Content="Очистить журнал"
                                 Command="{Binding ClearJournalCommand}" />
                     </WrapPanel>
-                    <TextBlock FontSize="16"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center"
-                               Text="Журнал последних алертов" />
+                    <StackPanel>
+                        <TextBlock FontSize="16"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   Text="Журнал последних алертов" />
+                        <TextBlock Margin="0,4,12,0"
+                                   Foreground="#FF666666"
+                                   FontSize="12"
+                                   Text="Фильтр журнала" />
+                        <TextBox Margin="0,8,12,0"
+                                 Height="28"
+                                 VerticalContentAlignment="Center"
+                                 ToolTip="Поиск по типу, теме, статусу, каналу"
+                                 Text="{Binding JournalFilterText, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
                 </DockPanel>
                 <ListView ItemsSource="{Binding RecentAlerts}">
                     <ListView.View>

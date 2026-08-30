@@ -83,6 +83,8 @@ public class AlertFilterTests
         settings.QuietHoursEnd = TimeSpan.FromHours(1);
 
         Assert.True(_filter.ShouldNotify(CreateEvent(MachineEventType.UnexpectedShutdown), settings));
+        Assert.True(_filter.ShouldNotify(CreateEvent(MachineEventType.BlueScreen), settings));
+        Assert.True(_filter.ShouldNotify(CreateEvent(MachineEventType.DefenderThreat), settings));
     }
 
     [Fact]

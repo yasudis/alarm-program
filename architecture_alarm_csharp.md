@@ -62,6 +62,7 @@ tests/
 - `DiscordWebhookChannel` (опционально).
 - `HttpWebhookNotificationChannel` (произвольный HTTPS JSON POST).
 - `SmtpNotificationChannel` (опциональный Email через SMTP).
+- `SystemHostWatchdog` / `SystemHttpEndpointWatchdog` (ping и HTTP health-check).
 - `SettingsStore` (JSON + защита секретов, включая SMTP-пароль).
 - `AppLogger` (Serilog/EventLog).
 

@@ -166,6 +166,32 @@ public static class SystemHealthRules
             "Windows сообщает, что требуется перезагрузка (обновления или отложенные операции с файлами).");
     }
 
+    public static MachineEvent? HostUnreachable(string host, bool isReachable)
+    {
+        if (string.IsNullOrWhiteSpace(host) || isReachable)
+        {
+            return null;
+        }
+
+        return Create(
+            MachineEventType.HostUnreachable,
+            "HostWatchdog",
+            $"Хост {host} не отвечает на ping.");
+    }
+
+    public static MachineEvent? HttpEndpointDown(string url, bool isHealthy)
+    {
+        if (string.IsNullOrWhiteSpace(url) || isHealthy)
+        {
+            return null;
+        }
+
+        return Create(
+            MachineEventType.HttpEndpointDown,
+            "HttpWatchdog",
+            $"HTTP-эндпоинт недоступен: {url}.");
+    }
+
     private static MachineEvent Create(MachineEventType type, string source, string message) => new()
     {
         Type = type,
