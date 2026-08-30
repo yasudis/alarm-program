@@ -12,6 +12,8 @@ public interface IAlertJournal
 
     Task ExportCsvAsync(string filePath, CancellationToken cancellationToken = default);
 
+    Task ExportJsonAsync(string filePath, CancellationToken cancellationToken = default);
+
     Task ClearAsync(CancellationToken cancellationToken = default);
 
     Task<int> PurgeOlderThanAsync(TimeSpan maxAge, CancellationToken cancellationToken = default);

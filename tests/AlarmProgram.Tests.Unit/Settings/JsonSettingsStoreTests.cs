@@ -58,7 +58,18 @@ public class JsonSettingsStoreTests
             NotifyOnUsbConnected = true,
             DailyDigestEnabled = true,
             DailyDigestTime = TimeSpan.FromHours(8),
-            JournalRetentionDays = 14
+            JournalRetentionDays = 14,
+            EmailEnabled = true,
+            SmtpHost = "smtp.example.com",
+            SmtpPort = 465,
+            SmtpUser = "bot",
+            SmtpPassword = "smtp-secret",
+            SmtpFrom = "alerts@example.com",
+            SmtpTo = "ops@example.com",
+            SmtpUseSsl = true,
+            NotifyOnFailedLogon = true,
+            NotifyOnApplicationCrash = false,
+            PlaySoundOnCriticalAlerts = false
         };
 
         await store.SaveAsync(original);
@@ -92,6 +103,17 @@ public class JsonSettingsStoreTests
         Assert.True(restored.DailyDigestEnabled);
         Assert.Equal(TimeSpan.FromHours(8), restored.DailyDigestTime);
         Assert.Equal(14, restored.JournalRetentionDays);
+        Assert.True(restored.EmailEnabled);
+        Assert.Equal("smtp.example.com", restored.SmtpHost);
+        Assert.Equal(465, restored.SmtpPort);
+        Assert.Equal("bot", restored.SmtpUser);
+        Assert.Equal("smtp-secret", restored.SmtpPassword);
+        Assert.Equal("alerts@example.com", restored.SmtpFrom);
+        Assert.Equal("ops@example.com", restored.SmtpTo);
+        Assert.True(restored.SmtpUseSsl);
+        Assert.True(restored.NotifyOnFailedLogon);
+        Assert.False(restored.NotifyOnApplicationCrash);
+        Assert.False(restored.PlaySoundOnCriticalAlerts);
     }
 
     [Fact]
@@ -136,6 +158,7 @@ public class JsonSettingsStoreTests
         const string token = "123456789:AAExampleTelegramBotTokenValue123456";
         const string webhook = "https://discord.com/api/webhooks/1/secret-token";
         const string genericWebhook = "https://hooks.example.com/secret-generic";
+        const string smtpPassword = "smtp-secret-password";
 
         await store.SaveAsync(new UserSettings
         {
@@ -145,7 +168,12 @@ public class JsonSettingsStoreTests
             DiscordEnabled = true,
             DiscordWebhookUrl = webhook,
             WebhookEnabled = true,
-            WebhookUrl = genericWebhook
+            WebhookUrl = genericWebhook,
+            EmailEnabled = true,
+            SmtpHost = "smtp.example.com",
+            SmtpFrom = "alerts@example.com",
+            SmtpTo = "ops@example.com",
+            SmtpPassword = smtpPassword
         });
 
         var fileText = await File.ReadAllTextAsync(path);
@@ -154,11 +182,13 @@ public class JsonSettingsStoreTests
         Assert.DoesNotContain(token, fileText);
         Assert.DoesNotContain("secret-token", fileText);
         Assert.DoesNotContain("secret-generic", fileText);
+        Assert.DoesNotContain(smtpPassword, fileText);
         Assert.Contains("777", fileText);
         Assert.Contains("enc.v1:", fileText);
         Assert.Equal(token, restored.TelegramBotToken);
         Assert.Equal(webhook, restored.DiscordWebhookUrl);
         Assert.Equal(genericWebhook, restored.WebhookUrl);
+        Assert.Equal(smtpPassword, restored.SmtpPassword);
     }
 
     [Fact]

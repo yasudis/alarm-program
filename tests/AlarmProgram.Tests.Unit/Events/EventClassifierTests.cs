@@ -20,6 +20,8 @@ public class EventClassifierTests
     [InlineData(6008, MachineEventType.UnexpectedShutdown)]
     [InlineData(7001, MachineEventType.UserLogon)]
     [InlineData(7002, MachineEventType.UserLogoff)]
+    [InlineData(4625, MachineEventType.FailedLogon)]
+    [InlineData(1000, MachineEventType.ApplicationCrash)]
     public void Classify_maps_known_event_ids(int eventId, MachineEventType expectedType)
     {
         var result = _classifier.Classify(CreateRaw(eventId));

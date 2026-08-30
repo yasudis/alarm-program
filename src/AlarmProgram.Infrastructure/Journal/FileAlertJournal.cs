@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using AlarmProgram.Application.Abstractions;
 using AlarmProgram.Application.Configuration;
 using AlarmProgram.Domain;
@@ -14,7 +15,8 @@ public sealed class FileAlertJournal : IAlertJournal
     {
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() }
     };
 
     private readonly ILogger<FileAlertJournal> _logger;
@@ -108,6 +110,30 @@ public sealed class FileAlertJournal : IAlertJournal
 
             await File.WriteAllTextAsync(filePath, builder.ToString(), Encoding.UTF8, cancellationToken);
             _logger.LogInformation("Журнал алертов экспортирован в {Path}", filePath);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task ExportJsonAsync(string filePath, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var entries = await ReadAllAsync(cancellationToken);
+            var directory = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            var json = JsonSerializer.Serialize(entries, JsonOptions);
+            await File.WriteAllTextAsync(filePath, json, Encoding.UTF8, cancellationToken);
+            _logger.LogInformation("Журнал алертов экспортирован в JSON: {Path}", filePath);
         }
         finally
         {

@@ -68,6 +68,9 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _setupHint = string.Empty;
 
+    [ObservableProperty]
+    private string _snoozeUntilTime = "08:00";
+
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         await Settings.InitializeAsync(cancellationToken);
@@ -120,6 +123,34 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void SnoozeUntilSpecifiedTime()
+    {
+        if (!TryResolveSnoozeTime(SnoozeUntilTime, out var until, out var error))
+        {
+            StatusMessage = error;
+            return;
+        }
+
+        _muteState.MuteUntil(until);
+        StatusMessage = _monitoringController.StatusText;
+        OnPropertyChanged(nameof(IsMuted));
+    }
+
+    [RelayCommand]
+    private void SnoozeUntilMorning()
+    {
+        if (!TryResolveSnoozeTime("08:00", out var until, out var error))
+        {
+            StatusMessage = error;
+            return;
+        }
+
+        _muteState.MuteUntil(until);
+        StatusMessage = _monitoringController.StatusText;
+        OnPropertyChanged(nameof(IsMuted));
+    }
+
+    [RelayCommand]
     private void ClearMute()
     {
         _muteState.ClearMute();
@@ -153,6 +184,35 @@ public sealed partial class MainViewModel : ObservableObject
         {
             _logger.LogError(ex, "Не удалось экспортировать журнал алертов");
             StatusMessage = "Не удалось экспортировать журнал.";
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportJournalJsonAsync()
+    {
+        try
+        {
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "JSON (*.json)|*.json",
+                FileName = $"alarm-journal-{DateTime.Now:yyyyMMdd-HHmmss}.json",
+                AddExtension = true,
+                DefaultExt = "json"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            await _alertJournal.ExportJsonAsync(dialog.FileName);
+            StatusMessage = $"Журнал экспортирован в JSON: {dialog.FileName}";
+            await RefreshJournalAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Не удалось экспортировать журнал алертов в JSON");
+            StatusMessage = "Не удалось экспортировать журнал в JSON.";
         }
     }
 
@@ -232,7 +292,7 @@ public sealed partial class MainViewModel : ObservableObject
             var settings = await _settingsStore.LoadAsync(cancellationToken);
             SetupHint = settings.HasEnabledChannel
                 ? string.Empty
-                : "Первый запуск: включите Telegram, Discord или HTTPS webhook, заполните поля, сохраните настройки и нажмите «Тестовая отправка».";
+                : "Первый запуск: включите Telegram, Discord, HTTPS webhook или Email, заполните поля, сохраните настройки и нажмите «Тестовая отправка».";
         }
         catch (Exception ex)
         {
@@ -269,5 +329,18 @@ public sealed partial class MainViewModel : ObservableObject
         }
 
         return assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+    }
+
+    internal static bool TryResolveSnoozeTime(string? value, out DateTimeOffset until, out string error)
+    {
+        until = default;
+        error = string.Empty;
+        if (!SnoozeSchedule.TryResolveLocalTime(value, DateTimeOffset.Now, out until))
+        {
+            error = "Некорректное время тишины. Укажите ЧЧ:ММ, например 08:00.";
+            return false;
+        }
+
+        return true;
     }
 }

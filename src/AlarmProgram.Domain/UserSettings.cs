@@ -10,6 +10,9 @@ public sealed class UserSettings
     private static readonly Regex TelegramChatIdPattern =
         new(@"^(@[A-Za-z][A-Za-z0-9_]{4,}|-?\d{1,20})$", RegexOptions.Compiled);
 
+    private static readonly Regex EmailPattern =
+        new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     public string TelegramBotToken { get; set; } = string.Empty;
 
     public string TelegramChatId { get; set; } = string.Empty;
@@ -23,6 +26,22 @@ public sealed class UserSettings
     public bool DiscordEnabled { get; set; }
 
     public bool WebhookEnabled { get; set; }
+
+    public bool EmailEnabled { get; set; }
+
+    public string SmtpHost { get; set; } = string.Empty;
+
+    public int SmtpPort { get; set; } = 587;
+
+    public string SmtpUser { get; set; } = string.Empty;
+
+    public string SmtpPassword { get; set; } = string.Empty;
+
+    public string SmtpFrom { get; set; } = string.Empty;
+
+    public string SmtpTo { get; set; } = string.Empty;
+
+    public bool SmtpUseSsl { get; set; } = true;
 
     public bool NotifyOnStartup { get; set; } = true;
 
@@ -86,6 +105,16 @@ public sealed class UserSettings
 
     public int JournalRetentionDays { get; set; }
 
+    public bool NotifyOnFailedLogon { get; set; } = true;
+
+    public bool NotifyOnApplicationCrash { get; set; } = true;
+
+    public bool NotifyOnRebootPending { get; set; } = true;
+
+    public bool PlaySoundOnCriticalAlerts { get; set; } = true;
+
+    public bool ShowTrayBalloonOnCriticalAlerts { get; set; } = true;
+
     public int LowDiskSpaceThresholdPercent { get; set; } = 10;
 
     public int BatteryLowThresholdPercent { get; set; } = 15;
@@ -112,7 +141,7 @@ public sealed class UserSettings
 
     public bool IsValid => Validate().Count == 0;
 
-    public bool HasEnabledChannel => TelegramEnabled || DiscordEnabled || WebhookEnabled;
+    public bool HasEnabledChannel => TelegramEnabled || DiscordEnabled || WebhookEnabled || EmailEnabled;
 
     public bool IsEventEnabled(MachineEventType eventType) => eventType switch
     {
@@ -142,6 +171,9 @@ public sealed class UserSettings
         MachineEventType.UsbConnected => NotifyOnUsbConnected,
         MachineEventType.UsbDisconnected => NotifyOnUsbDisconnected,
         MachineEventType.DailyDigest => DailyDigestEnabled,
+        MachineEventType.FailedLogon => NotifyOnFailedLogon,
+        MachineEventType.ApplicationCrash => NotifyOnApplicationCrash,
+        MachineEventType.RebootPending => NotifyOnRebootPending,
         _ => false
     };
 
@@ -150,6 +182,8 @@ public sealed class UserSettings
     public IReadOnlyList<string> GetWatchedProcessNames() => ParseWatchedProcessNames(WatchedProcessNames);
 
     public IReadOnlyList<string> GetWatchedServiceNames() => ParseWatchedServiceNames(WatchedServiceNames);
+
+    public IReadOnlyList<string> GetSmtpRecipients() => ParseEmailAddresses(SmtpTo);
 
     public static IReadOnlyList<string> ParseTelegramChatIds(string? raw)
     {
@@ -218,6 +252,19 @@ public sealed class UserSettings
         }
 
         return name.Trim().Trim('"');
+    }
+
+    public static IReadOnlyList<string> ParseEmailAddresses(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return [];
+        }
+
+        return raw
+            .Split([',', ';', '\n', '\r', ' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     public bool IsWithinQuietHours(DateTimeOffset timestamp)
@@ -289,6 +336,48 @@ public sealed class UserSettings
             else if (!IsValidHttpsWebhook(WebhookUrl))
             {
                 errors.Add("Некорректный формат HTTPS webhook URL.");
+            }
+        }
+
+        if (EmailEnabled)
+        {
+            if (string.IsNullOrWhiteSpace(SmtpHost) || SmtpHost.Trim().Length > 253)
+            {
+                errors.Add("SMTP-хост обязателен (макс. 253 символа).");
+            }
+
+            if (SmtpPort is < 1 or > 65535)
+            {
+                errors.Add("SMTP-порт должен быть от 1 до 65535.");
+            }
+
+            if (string.IsNullOrWhiteSpace(SmtpFrom) || !IsValidEmail(SmtpFrom.Trim()))
+            {
+                errors.Add("Некорректный адрес отправителя SMTP.");
+            }
+
+            var recipients = GetSmtpRecipients();
+            if (recipients.Count == 0)
+            {
+                errors.Add("Укажите хотя бы один email получателя.");
+            }
+            else if (recipients.Count > 10)
+            {
+                errors.Add("Можно указать не более 10 email-получателей.");
+            }
+            else if (recipients.Any(address => !IsValidEmail(address)))
+            {
+                errors.Add("Некорректный email получателя. Можно несколько через запятую.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(SmtpUser) && SmtpUser.Trim().Length > 256)
+            {
+                errors.Add("SMTP-логин слишком длинный (макс. 256 символов).");
+            }
+
+            if (!string.IsNullOrWhiteSpace(SmtpPassword) && SmtpPassword.Length > 256)
+            {
+                errors.Add("SMTP-пароль слишком длинный (макс. 256 символов).");
             }
         }
 
@@ -430,4 +519,7 @@ public sealed class UserSettings
 
         return uri.Scheme == Uri.UriSchemeHttps && !string.IsNullOrWhiteSpace(uri.Host);
     }
+
+    private static bool IsValidEmail(string value) =>
+        value.Length is >= 5 and <= 254 && EmailPattern.IsMatch(value);
 }

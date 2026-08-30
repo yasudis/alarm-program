@@ -153,6 +153,19 @@ public static class SystemHealthRules
         return Create(MachineEventType.DailyDigest, "DailyDigest", message);
     }
 
+    public static MachineEvent? RebootPending(bool isPending)
+    {
+        if (!isPending)
+        {
+            return null;
+        }
+
+        return Create(
+            MachineEventType.RebootPending,
+            "RebootMonitor",
+            "Windows сообщает, что требуется перезагрузка (обновления или отложенные операции с файлами).");
+    }
+
     private static MachineEvent Create(MachineEventType type, string source, string message) => new()
     {
         Type = type,

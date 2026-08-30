@@ -19,7 +19,16 @@ public sealed class WindowsEventLogReader : IEventCollector
         6008,
         6009,
         7001,
-        7002
+        7002,
+        4625,
+        1000
+    ];
+
+    private static readonly (string LogName, int[] EventIds)[] LogQueries =
+    [
+        ("System", [12, 13, 41, 1074, 1076, 6005, 6006, 6008, 6009, 7001, 7002]),
+        ("Security", [4625]),
+        ("Application", [1000])
     ];
 
     private const int MaxEvents = 500;
@@ -36,59 +45,74 @@ public sealed class WindowsEventLogReader : IEventCollector
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        var events = new List<RawSystemEvent>();
+        foreach (var (logName, eventIds) in LogQueries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            events.AddRange(ReadLog(logName, eventIds, since, cancellationToken));
+        }
+
+        var ordered = events
+            .OrderByDescending(item => item.OccurredAt)
+            .Take(MaxEvents)
+            .ToArray();
+
+        _logger.LogInformation(
+            "Прочитано {Count} системных событий начиная с {Since}",
+            ordered.Length,
+            since);
+        return Task.FromResult<IReadOnlyList<RawSystemEvent>>(ordered);
+    }
+
+    private List<RawSystemEvent> ReadLog(
+        string logName,
+        int[] eventIds,
+        DateTimeOffset since,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            var events = ReadSystemLog(since, cancellationToken);
-            _logger.LogInformation(
-                "Прочитано {Count} системных событий начиная с {Since}",
-                events.Count,
-                since);
-            return Task.FromResult<IReadOnlyList<RawSystemEvent>>(events);
+            var results = new List<RawSystemEvent>();
+            var queryString =
+                $"*[System[({BuildEventIdFilter(eventIds)}) and TimeCreated[@SystemTime>='{since.UtcDateTime:o}']]]";
+
+            var query = new EventLogQuery(logName, PathType.LogName, queryString)
+            {
+                ReverseDirection = true
+            };
+
+            using var reader = new EventLogReader(query);
+            for (var record = reader.ReadEvent(); record is not null; record = reader.ReadEvent())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                using (record)
+                {
+                    results.Add(Map(record));
+                }
+
+                if (results.Count >= MaxEvents)
+                {
+                    break;
+                }
+            }
+
+            return results;
         }
         catch (EventLogNotFoundException ex)
         {
-            _logger.LogWarning(ex, "Журнал System не найден");
+            _logger.LogWarning(ex, "Журнал {LogName} не найден", logName);
         }
         catch (UnauthorizedAccessException ex)
         {
-            _logger.LogWarning(ex, "Нет доступа к журналу System");
+            _logger.LogWarning(ex, "Нет доступа к журналу {LogName}", logName);
         }
         catch (EventLogException ex)
         {
-            _logger.LogWarning(ex, "Ошибка чтения журнала System");
+            _logger.LogWarning(ex, "Ошибка чтения журнала {LogName}", logName);
         }
 
-        return Task.FromResult<IReadOnlyList<RawSystemEvent>>(Array.Empty<RawSystemEvent>());
-    }
-
-    private List<RawSystemEvent> ReadSystemLog(DateTimeOffset since, CancellationToken cancellationToken)
-    {
-        var results = new List<RawSystemEvent>();
-        var queryString =
-            $"*[System[({BuildEventIdFilter()}) and TimeCreated[@SystemTime>='{since.UtcDateTime:o}']]]";
-
-        var query = new EventLogQuery("System", PathType.LogName, queryString)
-        {
-            ReverseDirection = true
-        };
-
-        using var reader = new EventLogReader(query);
-        for (var record = reader.ReadEvent(); record is not null; record = reader.ReadEvent())
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            using (record)
-            {
-                results.Add(Map(record));
-            }
-
-            if (results.Count >= MaxEvents)
-            {
-                break;
-            }
-        }
-
-        return results;
+        return [];
     }
 
     internal static RawSystemEvent Map(EventRecord record)
@@ -109,8 +133,8 @@ public sealed class WindowsEventLogReader : IEventCollector
         };
     }
 
-    private static string BuildEventIdFilter() =>
-        string.Join(" or ", CandidateEventIds.Select(id => $"EventID={id}"));
+    private static string BuildEventIdFilter(IEnumerable<int> eventIds) =>
+        string.Join(" or ", eventIds.Select(id => $"EventID={id}"));
 
     private static string? TryFormat(EventRecord record)
     {

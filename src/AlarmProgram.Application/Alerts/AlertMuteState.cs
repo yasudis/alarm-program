@@ -37,9 +37,20 @@ public sealed class AlertMuteState : IAlertMuteState
             return;
         }
 
+        MuteUntil(DateTimeOffset.UtcNow.Add(duration));
+    }
+
+    public void MuteUntil(DateTimeOffset until)
+    {
+        if (until <= DateTimeOffset.UtcNow)
+        {
+            ClearMute();
+            return;
+        }
+
         lock (_sync)
         {
-            _mutedUntil = DateTimeOffset.UtcNow.Add(duration);
+            _mutedUntil = until;
         }
 
         Changed?.Invoke(this, EventArgs.Empty);

@@ -68,6 +68,34 @@ public class FileAlertJournalTests
     }
 
     [Fact]
+    public async Task ExportJsonAsync_writes_entries_array()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "AlarmProgramTests", Guid.NewGuid().ToString("N"));
+        var journalPath = Path.Combine(dir, "journal.json");
+        var exportPath = Path.Combine(dir, "export.json");
+        var journal = CreateJournal(journalPath);
+
+        await journal.AppendAsync(new AlertJournalEntry
+        {
+            Timestamp = DateTimeOffset.Parse("2026-08-30T12:00:00Z"),
+            EventType = MachineEventType.FailedLogon,
+            Subject = "Неудачный вход в Windows",
+            Status = "Sent",
+            Channel = "Email",
+            HostName = "HOME-PC",
+            CorrelationId = "cid-json"
+        });
+
+        await journal.ExportJsonAsync(exportPath);
+        var json = await File.ReadAllTextAsync(exportPath);
+
+        Assert.Contains("FailedLogon", json);
+        Assert.Contains("Email", json);
+        Assert.Contains("cid-json", json);
+        Assert.Contains("\"eventType\"", json);
+    }
+
+    [Fact]
     public async Task ClearAsync_removes_all_entries()
     {
         var path = Path.Combine(Path.GetTempPath(), "AlarmProgramTests", Guid.NewGuid().ToString("N"), "journal.json");

@@ -14,20 +14,22 @@ public sealed class AlertFilter
         DateTimeOffset? lastSentOfType,
         DateTimeOffset? now = null)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+        return ShouldRaiseLocally(machineEvent, settings, muteState, lastSentOfType, now)
+               && settings.HasEnabledChannel;
+    }
+
+    public bool ShouldRaiseLocally(
+        MachineEvent machineEvent,
+        UserSettings settings,
+        IAlertMuteState? muteState,
+        DateTimeOffset? lastSentOfType,
+        DateTimeOffset? now = null)
+    {
         ArgumentNullException.ThrowIfNull(machineEvent);
         ArgumentNullException.ThrowIfNull(settings);
 
-        if (!settings.IsEventEnabled(machineEvent.Type))
-        {
-            return false;
-        }
-
-        if (!settings.IsValid)
-        {
-            return false;
-        }
-
-        if (!settings.HasEnabledChannel)
+        if (!settings.IsEventEnabled(machineEvent.Type) || !settings.IsValid)
         {
             return false;
         }

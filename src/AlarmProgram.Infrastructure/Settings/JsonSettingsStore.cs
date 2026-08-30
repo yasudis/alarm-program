@@ -106,6 +106,18 @@ public sealed class JsonSettingsStore : ISettingsStore
             : decryptSecrets
                 ? _secretProtector.Unprotect(dto.WebhookUrl)
                 : dto.WebhookUrl,
+        EmailEnabled = dto.EmailEnabled,
+        SmtpHost = dto.SmtpHost ?? string.Empty,
+        SmtpPort = dto.SmtpPort <= 0 ? 587 : dto.SmtpPort,
+        SmtpUser = dto.SmtpUser ?? string.Empty,
+        SmtpPassword = string.IsNullOrEmpty(dto.SmtpPassword)
+            ? string.Empty
+            : decryptSecrets
+                ? _secretProtector.Unprotect(dto.SmtpPassword)
+                : dto.SmtpPassword,
+        SmtpFrom = dto.SmtpFrom ?? string.Empty,
+        SmtpTo = dto.SmtpTo ?? string.Empty,
+        SmtpUseSsl = dto.SmtpUseSsl,
         NotifyOnStartup = dto.NotifyOnStartup,
         NotifyOnShutdown = dto.NotifyOnShutdown,
         NotifyOnRestart = dto.NotifyOnRestart,
@@ -148,7 +160,12 @@ public sealed class JsonSettingsStore : ISettingsStore
         NotifyOnUsbDisconnected = dto.NotifyOnUsbDisconnected,
         DailyDigestEnabled = dto.DailyDigestEnabled,
         DailyDigestTime = ParseTime(dto.DailyDigestTime, TimeSpan.FromHours(9)),
-        JournalRetentionDays = dto.JournalRetentionDays < 0 ? 0 : dto.JournalRetentionDays
+        JournalRetentionDays = dto.JournalRetentionDays < 0 ? 0 : dto.JournalRetentionDays,
+        NotifyOnFailedLogon = dto.NotifyOnFailedLogon,
+        NotifyOnApplicationCrash = dto.NotifyOnApplicationCrash,
+        NotifyOnRebootPending = dto.NotifyOnRebootPending,
+        PlaySoundOnCriticalAlerts = dto.PlaySoundOnCriticalAlerts,
+        ShowTrayBalloonOnCriticalAlerts = dto.ShowTrayBalloonOnCriticalAlerts
     };
 
     private SettingsFileDto MapToDto(UserSettings settings, bool encryptSecrets) => new()
@@ -170,6 +187,18 @@ public sealed class JsonSettingsStore : ISettingsStore
             : encryptSecrets
                 ? _secretProtector.Protect(settings.WebhookUrl)
                 : settings.WebhookUrl,
+        EmailEnabled = settings.EmailEnabled,
+        SmtpHost = settings.SmtpHost ?? string.Empty,
+        SmtpPort = settings.SmtpPort,
+        SmtpUser = settings.SmtpUser ?? string.Empty,
+        SmtpPassword = string.IsNullOrEmpty(settings.SmtpPassword)
+            ? string.Empty
+            : encryptSecrets
+                ? _secretProtector.Protect(settings.SmtpPassword)
+                : settings.SmtpPassword,
+        SmtpFrom = settings.SmtpFrom ?? string.Empty,
+        SmtpTo = settings.SmtpTo ?? string.Empty,
+        SmtpUseSsl = settings.SmtpUseSsl,
         NotifyOnStartup = settings.NotifyOnStartup,
         NotifyOnShutdown = settings.NotifyOnShutdown,
         NotifyOnRestart = settings.NotifyOnRestart,
@@ -212,7 +241,12 @@ public sealed class JsonSettingsStore : ISettingsStore
         NotifyOnUsbDisconnected = settings.NotifyOnUsbDisconnected,
         DailyDigestEnabled = settings.DailyDigestEnabled,
         DailyDigestTime = FormatTime(settings.DailyDigestTime),
-        JournalRetentionDays = settings.JournalRetentionDays
+        JournalRetentionDays = settings.JournalRetentionDays,
+        NotifyOnFailedLogon = settings.NotifyOnFailedLogon,
+        NotifyOnApplicationCrash = settings.NotifyOnApplicationCrash,
+        NotifyOnRebootPending = settings.NotifyOnRebootPending,
+        PlaySoundOnCriticalAlerts = settings.PlaySoundOnCriticalAlerts,
+        ShowTrayBalloonOnCriticalAlerts = settings.ShowTrayBalloonOnCriticalAlerts
     };
 
     private static async Task WriteDtoAsync(

@@ -60,7 +60,9 @@ tests/
 - `WindowsEventLogReader` (чтение Event Log).
 - `TelegramNotificationChannel` (HTTP вызовы Telegram Bot API).
 - `DiscordWebhookChannel` (опционально).
-- `SettingsStore` (JSON + защита секретов).
+- `HttpWebhookNotificationChannel` (произвольный HTTPS JSON POST).
+- `SmtpNotificationChannel` (опциональный Email через SMTP).
+- `SettingsStore` (JSON + защита секретов, включая SMTP-пароль).
 - `AppLogger` (Serilog/EventLog).
 
 ## 3.4 UI (WPF)

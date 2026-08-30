@@ -19,6 +19,8 @@ public sealed class AlertOrchestrator
     private readonly IAlertOutbox _alertOutbox;
     private readonly IAlertMuteState _muteState;
     private readonly IWindowsEventLogWriter _windowsEventLogWriter;
+    private readonly IAlertSoundPlayer _soundPlayer;
+    private readonly ITrayBalloonNotifier _trayBalloonNotifier;
     private readonly ILogger<AlertOrchestrator> _logger;
     private readonly TimeSpan _deduplicationWindow;
     private readonly object _deduplicationLock = new();
@@ -38,7 +40,9 @@ public sealed class AlertOrchestrator
         IAlertMuteState muteState,
         IWindowsEventLogWriter windowsEventLogWriter,
         IOptions<MonitoringOptions> monitoringOptions,
-        ILogger<AlertOrchestrator> logger)
+        ILogger<AlertOrchestrator> logger,
+        IAlertSoundPlayer? soundPlayer = null,
+        ITrayBalloonNotifier? trayBalloonNotifier = null)
     {
         _collector = collector;
         _classifier = classifier;
@@ -50,6 +54,8 @@ public sealed class AlertOrchestrator
         _alertOutbox = alertOutbox;
         _muteState = muteState;
         _windowsEventLogWriter = windowsEventLogWriter;
+        _soundPlayer = soundPlayer ?? NullAlertSoundPlayer.Instance;
+        _trayBalloonNotifier = trayBalloonNotifier ?? NullTrayBalloonNotifier.Instance;
         _deduplicationWindow = ResolveDeduplicationWindow(monitoringOptions.Value.DeduplicationWindowSeconds);
         _logger = logger;
     }
@@ -198,7 +204,7 @@ public sealed class AlertOrchestrator
             }
         }
 
-        if (!_filter.ShouldNotify(machineEvent, settings, _muteState, lastSentOfType: lastSent))
+        if (!_filter.ShouldRaiseLocally(machineEvent, settings, _muteState, lastSentOfType: lastSent))
         {
             _logger.LogInformation(
                 "Событие {EventType} на {HostName} отфильтровано (quiet hours/settings/mute/cooldown)",
@@ -219,6 +225,22 @@ public sealed class AlertOrchestrator
                 "Ошибка форматирования события {EventType} на {HostName}",
                 machineEvent.Type,
                 machineEvent.HostName);
+            return;
+        }
+
+        RaiseLocalEffects(machineEvent, message, settings);
+
+        if (!settings.HasEnabledChannel)
+        {
+            _logger.LogInformation(
+                "Событие {EventType} обработано локально без каналов. CorrelationId={CorrelationId}",
+                machineEvent.Type,
+                message.CorrelationId);
+            lock (_cooldownLock)
+            {
+                _lastSentByType[machineEvent.Type] = DateTimeOffset.UtcNow;
+            }
+
             return;
         }
 
@@ -295,6 +317,43 @@ public sealed class AlertOrchestrator
         {
             _lastSentByType[machineEvent.Type] = DateTimeOffset.UtcNow;
         }
+    }
+
+    private void RaiseLocalEffects(MachineEvent machineEvent, AlertMessage message, UserSettings settings)
+    {
+        try
+        {
+            if (settings.PlaySoundOnCriticalAlerts && LocalAlertRules.ShouldPlaySound(machineEvent.Type))
+            {
+                _soundPlayer.PlayCritical();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Не удалось проиграть локальный звук для {EventType}", machineEvent.Type);
+        }
+
+        try
+        {
+            if (settings.ShowTrayBalloonOnCriticalAlerts && LocalAlertRules.ShouldShowBalloon(machineEvent.Type))
+            {
+                _trayBalloonNotifier.Show(message.Subject, Truncate(message.Body, 120));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Не удалось показать balloon в трее для {EventType}", machineEvent.Type);
+        }
+    }
+
+    private static string Truncate(string text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
+        {
+            return text;
+        }
+
+        return text[..(maxLength - 1)] + "…";
     }
 
     private bool IsDuplicate(MachineEvent machineEvent)

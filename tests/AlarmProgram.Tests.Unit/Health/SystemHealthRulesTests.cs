@@ -97,4 +97,13 @@ public class SystemHealthRulesTests
         Assert.Contains("KINGSTON", connected.Message);
         Assert.Null(SystemHealthRules.UsbConnected(" "));
     }
+
+    [Fact]
+    public void RebootPending_returns_alert_only_when_pending()
+    {
+        var alert = SystemHealthRules.RebootPending(true);
+        Assert.NotNull(alert);
+        Assert.Equal(MachineEventType.RebootPending, alert.Type);
+        Assert.Null(SystemHealthRules.RebootPending(false));
+    }
 }

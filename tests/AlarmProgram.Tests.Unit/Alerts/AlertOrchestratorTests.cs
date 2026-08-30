@@ -251,6 +251,9 @@ public class AlertOrchestratorTests
         public Task ExportCsvAsync(string filePath, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
 
+        public Task ExportJsonAsync(string filePath, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
         public Task ClearAsync(CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
 

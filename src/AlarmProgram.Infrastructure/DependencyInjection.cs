@@ -11,6 +11,7 @@ using AlarmProgram.Infrastructure.Notifications;
 using AlarmProgram.Infrastructure.Outbox;
 using AlarmProgram.Infrastructure.Power;
 using AlarmProgram.Infrastructure.ProcessWatch;
+using AlarmProgram.Infrastructure.Reboot;
 using AlarmProgram.Infrastructure.Resources;
 using AlarmProgram.Infrastructure.Security;
 using AlarmProgram.Infrastructure.ServiceWatch;
@@ -43,11 +44,16 @@ public static class DependencyInjection
         services.AddSingleton<IServiceWatchdog, SystemServiceWatchdog>();
         services.AddSingleton<IUsbDeviceMonitor, RemovableDriveUsbMonitor>();
         services.AddSingleton<IResourceMonitor, WindowsResourceMonitor>();
+        services.AddSingleton<IPendingRebootMonitor, WindowsPendingRebootMonitor>();
         services.AddSingleton<IEventCollector, WindowsEventLogReader>();
         services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromSeconds(30) });
+        services.AddSingleton<ISmtpMailSender, SystemSmtpMailSender>();
+        services.AddSingleton<IAlertSoundPlayer, WindowsAlertSoundPlayer>();
+        services.AddSingleton<ITrayBalloonNotifier, DeferredTrayBalloonNotifier>();
         services.AddSingleton<INotificationChannel, TelegramNotificationChannel>();
         services.AddSingleton<INotificationChannel, DiscordNotificationChannel>();
         services.AddSingleton<INotificationChannel, HttpWebhookNotificationChannel>();
+        services.AddSingleton<INotificationChannel, SmtpNotificationChannel>();
 
         return services;
     }

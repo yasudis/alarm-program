@@ -10,6 +10,8 @@ public interface IAlertMuteState
 
     void MuteFor(TimeSpan duration);
 
+    void MuteUntil(DateTimeOffset until);
+
     void ClearMute();
 
     bool IsActiveAt(DateTimeOffset timestamp);

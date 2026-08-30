@@ -16,6 +16,22 @@ internal sealed class SettingsFileDto
 
     public bool WebhookEnabled { get; set; }
 
+    public bool EmailEnabled { get; set; }
+
+    public string SmtpHost { get; set; } = string.Empty;
+
+    public int SmtpPort { get; set; } = 587;
+
+    public string SmtpUser { get; set; } = string.Empty;
+
+    public string SmtpPassword { get; set; } = string.Empty;
+
+    public string SmtpFrom { get; set; } = string.Empty;
+
+    public string SmtpTo { get; set; } = string.Empty;
+
+    public bool SmtpUseSsl { get; set; } = true;
+
     public bool NotifyOnStartup { get; set; } = true;
 
     public bool NotifyOnShutdown { get; set; } = true;
@@ -101,4 +117,14 @@ internal sealed class SettingsFileDto
     public string DailyDigestTime { get; set; } = "09:00";
 
     public int JournalRetentionDays { get; set; }
+
+    public bool NotifyOnFailedLogon { get; set; } = true;
+
+    public bool NotifyOnApplicationCrash { get; set; } = true;
+
+    public bool NotifyOnRebootPending { get; set; } = true;
+
+    public bool PlaySoundOnCriticalAlerts { get; set; } = true;
+
+    public bool ShowTrayBalloonOnCriticalAlerts { get; set; } = true;
 }

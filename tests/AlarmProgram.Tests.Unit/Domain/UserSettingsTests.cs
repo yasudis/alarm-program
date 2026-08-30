@@ -279,13 +279,52 @@ public class UserSettingsTests
             NotifyOnServiceDown = true,
             NotifyOnUsbConnected = true,
             NotifyOnUsbDisconnected = false,
-            DailyDigestEnabled = true
+            DailyDigestEnabled = true,
+            NotifyOnFailedLogon = false,
+            NotifyOnApplicationCrash = true,
+            NotifyOnRebootPending = false
         };
 
         Assert.True(settings.IsEventEnabled(MachineEventType.ServiceDown));
         Assert.True(settings.IsEventEnabled(MachineEventType.UsbConnected));
         Assert.False(settings.IsEventEnabled(MachineEventType.UsbDisconnected));
         Assert.True(settings.IsEventEnabled(MachineEventType.DailyDigest));
+        Assert.False(settings.IsEventEnabled(MachineEventType.FailedLogon));
+        Assert.True(settings.IsEventEnabled(MachineEventType.ApplicationCrash));
+        Assert.False(settings.IsEventEnabled(MachineEventType.RebootPending));
+    }
+
+    [Fact]
+    public void HasEnabledChannel_includes_email()
+    {
+        var settings = new UserSettings
+        {
+            EmailEnabled = true,
+            SmtpHost = "smtp.example.com",
+            SmtpPort = 587,
+            SmtpFrom = "alerts@example.com",
+            SmtpTo = "ops@example.com"
+        };
+
+        Assert.True(settings.HasEnabledChannel);
+        Assert.True(settings.IsValid);
+    }
+
+    [Fact]
+    public void Validate_requires_smtp_fields_when_email_is_enabled()
+    {
+        var settings = new UserSettings { EmailEnabled = true };
+
+        Assert.False(settings.IsValid);
+        Assert.Contains(settings.Validate(), error => error.Contains("SMTP-хост", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ParseEmailAddresses_splits_and_dedupes()
+    {
+        var emails = UserSettings.ParseEmailAddresses("ops@example.com, a@b.co, ops@example.com");
+
+        Assert.Equal(new[] { "ops@example.com", "a@b.co" }, emails);
     }
 
     [Fact]

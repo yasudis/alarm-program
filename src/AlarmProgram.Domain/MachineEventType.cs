@@ -28,5 +28,8 @@ public enum MachineEventType
     ServiceDown = 23,
     UsbConnected = 24,
     UsbDisconnected = 25,
-    DailyDigest = 26
+    DailyDigest = 26,
+    FailedLogon = 27,
+    ApplicationCrash = 28,
+    RebootPending = 29
 }

@@ -118,6 +118,9 @@ public sealed class AlertFormatter : IAlertFormatter
         MachineEventType.UsbConnected => "USB/съёмный диск подключён",
         MachineEventType.UsbDisconnected => "USB/съёмный диск отключён",
         MachineEventType.DailyDigest => "Ежедневный дайджест алертов",
+        MachineEventType.FailedLogon => "Неудачный вход в Windows",
+        MachineEventType.ApplicationCrash => "Падение приложения",
+        MachineEventType.RebootPending => "Требуется перезагрузка Windows",
         _ => "Событие ПК"
     };
 }

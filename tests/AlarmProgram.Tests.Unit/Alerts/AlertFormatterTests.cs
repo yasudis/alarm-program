@@ -35,6 +35,9 @@ public class AlertFormatterTests
     [InlineData(MachineEventType.UsbConnected, "USB/съёмный диск подключён")]
     [InlineData(MachineEventType.UsbDisconnected, "USB/съёмный диск отключён")]
     [InlineData(MachineEventType.DailyDigest, "Ежедневный дайджест алертов")]
+    [InlineData(MachineEventType.FailedLogon, "Неудачный вход в Windows")]
+    [InlineData(MachineEventType.ApplicationCrash, "Падение приложения")]
+    [InlineData(MachineEventType.RebootPending, "Требуется перезагрузка Windows")]
     public void Format_uses_stable_subject_and_includes_host_and_timestamp(
         MachineEventType eventType,
         string expectedSubject)

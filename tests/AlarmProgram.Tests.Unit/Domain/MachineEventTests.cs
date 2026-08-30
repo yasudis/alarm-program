@@ -18,6 +18,9 @@ public class MachineEventTests
     [InlineData(MachineEventType.ServiceDown)]
     [InlineData(MachineEventType.UsbConnected)]
     [InlineData(MachineEventType.DailyDigest)]
+    [InlineData(MachineEventType.FailedLogon)]
+    [InlineData(MachineEventType.ApplicationCrash)]
+    [InlineData(MachineEventType.RebootPending)]
     public void MachineEvent_supports_core_event_types(MachineEventType eventType)
     {
         var machineEvent = new MachineEvent

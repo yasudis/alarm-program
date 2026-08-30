@@ -54,6 +54,30 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _webhookEnabled;
 
     [ObservableProperty]
+    private bool _emailEnabled;
+
+    [ObservableProperty]
+    private string _smtpHost = string.Empty;
+
+    [ObservableProperty]
+    private int _smtpPort = 587;
+
+    [ObservableProperty]
+    private string _smtpUser = string.Empty;
+
+    [ObservableProperty]
+    private string _smtpPassword = string.Empty;
+
+    [ObservableProperty]
+    private string _smtpFrom = string.Empty;
+
+    [ObservableProperty]
+    private string _smtpTo = string.Empty;
+
+    [ObservableProperty]
+    private bool _smtpUseSsl = true;
+
+    [ObservableProperty]
     private bool _notifyOnStartup = true;
 
     [ObservableProperty]
@@ -147,6 +171,21 @@ public sealed partial class SettingsViewModel : ObservableObject
     private int _journalRetentionDays;
 
     [ObservableProperty]
+    private bool _notifyOnFailedLogon = true;
+
+    [ObservableProperty]
+    private bool _notifyOnApplicationCrash = true;
+
+    [ObservableProperty]
+    private bool _notifyOnRebootPending = true;
+
+    [ObservableProperty]
+    private bool _playSoundOnCriticalAlerts = true;
+
+    [ObservableProperty]
+    private bool _showTrayBalloonOnCriticalAlerts = true;
+
+    [ObservableProperty]
     private int _lowDiskSpaceThresholdPercent = 10;
 
     [ObservableProperty]
@@ -191,13 +230,15 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _testResultMessage = string.Empty;
 
-    public bool NeedsOnboarding => !TelegramEnabled && !DiscordEnabled && !WebhookEnabled;
+    public bool NeedsOnboarding => !TelegramEnabled && !DiscordEnabled && !WebhookEnabled && !EmailEnabled;
 
     partial void OnTelegramEnabledChanged(bool value) => OnPropertyChanged(nameof(NeedsOnboarding));
 
     partial void OnDiscordEnabledChanged(bool value) => OnPropertyChanged(nameof(NeedsOnboarding));
 
     partial void OnWebhookEnabledChanged(bool value) => OnPropertyChanged(nameof(NeedsOnboarding));
+
+    partial void OnEmailEnabledChanged(bool value) => OnPropertyChanged(nameof(NeedsOnboarding));
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -464,6 +505,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         TelegramEnabled = TelegramEnabled,
         DiscordEnabled = DiscordEnabled,
         WebhookEnabled = WebhookEnabled,
+        EmailEnabled = EmailEnabled,
+        SmtpHost = SmtpHost.Trim(),
+        SmtpPort = SmtpPort,
+        SmtpUser = SmtpUser.Trim(),
+        SmtpPassword = SmtpPassword,
+        SmtpFrom = SmtpFrom.Trim(),
+        SmtpTo = SmtpTo.Trim(),
+        SmtpUseSsl = SmtpUseSsl,
         NotifyOnStartup = NotifyOnStartup,
         NotifyOnShutdown = NotifyOnShutdown,
         NotifyOnRestart = NotifyOnRestart,
@@ -495,6 +544,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         DailyDigestEnabled = DailyDigestEnabled,
         DailyDigestTime = ParseTimeOrDefault(DailyDigestTime, TimeSpan.FromHours(9)),
         JournalRetentionDays = JournalRetentionDays,
+        NotifyOnFailedLogon = NotifyOnFailedLogon,
+        NotifyOnApplicationCrash = NotifyOnApplicationCrash,
+        NotifyOnRebootPending = NotifyOnRebootPending,
+        PlaySoundOnCriticalAlerts = PlaySoundOnCriticalAlerts,
+        ShowTrayBalloonOnCriticalAlerts = ShowTrayBalloonOnCriticalAlerts,
         LowDiskSpaceThresholdPercent = LowDiskSpaceThresholdPercent,
         BatteryLowThresholdPercent = BatteryLowThresholdPercent,
         AlertCooldownMinutes = AlertCooldownMinutes,
@@ -518,6 +572,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         TelegramEnabled = settings.TelegramEnabled;
         DiscordEnabled = settings.DiscordEnabled;
         WebhookEnabled = settings.WebhookEnabled;
+        EmailEnabled = settings.EmailEnabled;
+        SmtpHost = settings.SmtpHost ?? string.Empty;
+        SmtpPort = settings.SmtpPort <= 0 ? 587 : settings.SmtpPort;
+        SmtpUser = settings.SmtpUser ?? string.Empty;
+        SmtpPassword = settings.SmtpPassword ?? string.Empty;
+        SmtpFrom = settings.SmtpFrom ?? string.Empty;
+        SmtpTo = settings.SmtpTo ?? string.Empty;
+        SmtpUseSsl = settings.SmtpUseSsl;
         NotifyOnStartup = settings.NotifyOnStartup;
         NotifyOnShutdown = settings.NotifyOnShutdown;
         NotifyOnRestart = settings.NotifyOnRestart;
@@ -549,6 +611,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         DailyDigestEnabled = settings.DailyDigestEnabled;
         DailyDigestTime = FormatTime(settings.DailyDigestTime);
         JournalRetentionDays = settings.JournalRetentionDays;
+        NotifyOnFailedLogon = settings.NotifyOnFailedLogon;
+        NotifyOnApplicationCrash = settings.NotifyOnApplicationCrash;
+        NotifyOnRebootPending = settings.NotifyOnRebootPending;
+        PlaySoundOnCriticalAlerts = settings.PlaySoundOnCriticalAlerts;
+        ShowTrayBalloonOnCriticalAlerts = settings.ShowTrayBalloonOnCriticalAlerts;
         LowDiskSpaceThresholdPercent = settings.LowDiskSpaceThresholdPercent;
         BatteryLowThresholdPercent = settings.BatteryLowThresholdPercent;
         AlertCooldownMinutes = settings.AlertCooldownMinutes;

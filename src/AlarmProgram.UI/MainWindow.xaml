@@ -56,6 +56,17 @@
                             Margin="8,0,0,0"
                             Content="Снять тишину"
                             Command="{Binding ClearMuteCommand}" />
+                    <StackPanel Orientation="Horizontal" Margin="8,0,0,0">
+                        <TextBox Width="70"
+                                 Height="30"
+                                 VerticalContentAlignment="Center"
+                                 Text="{Binding SnoozeUntilTime, UpdateSourceTrigger=PropertyChanged}" />
+                        <Button Width="130"
+                                Height="30"
+                                Margin="8,0,0,0"
+                                Content="Тишина до…"
+                                Command="{Binding SnoozeUntilSpecifiedTimeCommand}" />
+                    </StackPanel>
                 </WrapPanel>
                 <TextBlock Text="{Binding StatusMessage}"
                            FontSize="15"
@@ -108,6 +119,29 @@
                     <TextBlock Margin="0,8,0,0"
                                Text="HTTPS Webhook URL" />
                     <TextBox Text="{Binding Settings.WebhookUrl, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <CheckBox Margin="0,16,0,0"
+                              Content="Включить Email (SMTP)"
+                              IsChecked="{Binding Settings.EmailEnabled}" />
+                    <TextBlock Margin="0,8,0,0" Text="SMTP-хост" />
+                    <TextBox Text="{Binding Settings.SmtpHost, UpdateSourceTrigger=PropertyChanged}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock VerticalAlignment="Center" Text="Порт:" />
+                        <TextBox Width="70"
+                                 Margin="8,0,16,0"
+                                 Text="{Binding Settings.SmtpPort, UpdateSourceTrigger=PropertyChanged}" />
+                        <CheckBox VerticalAlignment="Center"
+                                  Content="SSL/TLS"
+                                  IsChecked="{Binding Settings.SmtpUseSsl}" />
+                    </StackPanel>
+                    <TextBlock Margin="0,8,0,0" Text="SMTP-логин (опционально)" />
+                    <TextBox Text="{Binding Settings.SmtpUser, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Margin="0,8,0,0" Text="SMTP-пароль" />
+                    <TextBox Text="{Binding Settings.SmtpPassword, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Margin="0,8,0,0" Text="Отправитель (From)" />
+                    <TextBox Text="{Binding Settings.SmtpFrom, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Margin="0,8,0,0" Text="Получатели (To, несколько через запятую)" />
+                    <TextBox Text="{Binding Settings.SmtpTo, UpdateSourceTrigger=PropertyChanged}" />
 
                     <TextBlock Margin="0,16,0,0"
                                FontWeight="SemiBold"
@@ -185,6 +219,15 @@
                         <CheckBox Margin="0,0,16,8"
                                   Content="USB disconnected"
                                   IsChecked="{Binding Settings.NotifyOnUsbDisconnected}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Failed logon"
+                                  IsChecked="{Binding Settings.NotifyOnFailedLogon}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Application crash"
+                                  IsChecked="{Binding Settings.NotifyOnApplicationCrash}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Reboot pending"
+                                  IsChecked="{Binding Settings.NotifyOnRebootPending}" />
                     </WrapPanel>
 
                     <TextBlock Margin="0,8,0,0"
@@ -196,6 +239,12 @@
                     <CheckBox Margin="0,8,0,0"
                               Content="Сворачивать в системный трей"
                               IsChecked="{Binding Settings.MinimizeToTray}" />
+                    <CheckBox Margin="0,8,0,0"
+                              Content="Звук при критичных алертах (даже без сети)"
+                              IsChecked="{Binding Settings.PlaySoundOnCriticalAlerts}" />
+                    <CheckBox Margin="0,8,0,0"
+                              Content="Balloon в трее при критичных алертах"
+                              IsChecked="{Binding Settings.ShowTrayBalloonOnCriticalAlerts}" />
                     <CheckBox Margin="0,8,0,0"
                               Content="Heartbeat (ПК в сети)"
                               IsChecked="{Binding Settings.HeartbeatEnabled}" />
@@ -358,6 +407,11 @@
                                 Margin="8,0,0,0"
                                 Content="Экспорт CSV"
                                 Command="{Binding ExportJournalCommand}" />
+                        <Button Width="140"
+                                Height="28"
+                                Margin="8,0,0,0"
+                                Content="Экспорт JSON"
+                                Command="{Binding ExportJournalJsonCommand}" />
                         <Button Width="160"
                                 Height="28"
                                 Margin="8,0,0,0"
