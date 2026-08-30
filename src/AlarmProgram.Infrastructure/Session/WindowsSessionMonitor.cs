@@ -69,6 +69,9 @@ public sealed class WindowsSessionMonitor : ISessionMonitor
             {
                 SessionSwitchReason.SessionLock => SystemHealthRules.SessionLock(),
                 SessionSwitchReason.SessionUnlock => SystemHealthRules.SessionUnlock(),
+                SessionSwitchReason.RemoteConnect => SystemHealthRules.RdpConnected(),
+                SessionSwitchReason.SessionRemoteControl => SystemHealthRules.RdpConnected(),
+                SessionSwitchReason.RemoteDisconnect => SystemHealthRules.RdpDisconnected(),
                 _ => null
             };
 

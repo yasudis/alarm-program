@@ -13,6 +13,8 @@ public class MachineEventTests
     [InlineData(MachineEventType.Heartbeat)]
     [InlineData(MachineEventType.SessionLock)]
     [InlineData(MachineEventType.LowDiskSpace)]
+    [InlineData(MachineEventType.ProcessDown)]
+    [InlineData(MachineEventType.RdpConnected)]
     public void MachineEvent_supports_core_event_types(MachineEventType eventType)
     {
         var machineEvent = new MachineEvent

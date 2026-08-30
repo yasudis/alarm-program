@@ -45,7 +45,14 @@ public class JsonSettingsStoreTests
             QuietHoursStart = TimeSpan.FromHours(22),
             QuietHoursEnd = TimeSpan.FromHours(6),
             RunAtWindowsStartup = true,
-            MinimizeToTray = false
+            MinimizeToTray = false,
+            WebhookEnabled = true,
+            WebhookUrl = "https://hooks.example.com/alarm",
+            NotifyOnProcessDown = true,
+            WatchedProcessNames = "nginx",
+            NotifyOnHighMemory = true,
+            HighMemoryThresholdPercent = 80,
+            NotifyOnRdpDisconnected = true
         };
 
         await store.SaveAsync(original);
@@ -66,6 +73,13 @@ public class JsonSettingsStoreTests
         Assert.True(restored.RunAtWindowsStartup);
         Assert.False(restored.MinimizeToTray);
         Assert.Equal(string.Empty, restored.DisplayName);
+        Assert.True(restored.WebhookEnabled);
+        Assert.Equal("https://hooks.example.com/alarm", restored.WebhookUrl);
+        Assert.True(restored.NotifyOnProcessDown);
+        Assert.Equal("nginx", restored.WatchedProcessNames);
+        Assert.True(restored.NotifyOnHighMemory);
+        Assert.Equal(80, restored.HighMemoryThresholdPercent);
+        Assert.True(restored.NotifyOnRdpDisconnected);
     }
 
     [Fact]
@@ -109,6 +123,7 @@ public class JsonSettingsStoreTests
         var store = new JsonSettingsStore(options, new DpapiSecretProtector(), NullLogger<JsonSettingsStore>.Instance);
         const string token = "123456789:AAExampleTelegramBotTokenValue123456";
         const string webhook = "https://discord.com/api/webhooks/1/secret-token";
+        const string genericWebhook = "https://hooks.example.com/secret-generic";
 
         await store.SaveAsync(new UserSettings
         {
@@ -116,7 +131,9 @@ public class JsonSettingsStoreTests
             TelegramBotToken = token,
             TelegramChatId = "777",
             DiscordEnabled = true,
-            DiscordWebhookUrl = webhook
+            DiscordWebhookUrl = webhook,
+            WebhookEnabled = true,
+            WebhookUrl = genericWebhook
         });
 
         var fileText = await File.ReadAllTextAsync(path);
@@ -124,10 +141,12 @@ public class JsonSettingsStoreTests
 
         Assert.DoesNotContain(token, fileText);
         Assert.DoesNotContain("secret-token", fileText);
+        Assert.DoesNotContain("secret-generic", fileText);
         Assert.Contains("777", fileText);
         Assert.Contains("enc.v1:", fileText);
         Assert.Equal(token, restored.TelegramBotToken);
         Assert.Equal(webhook, restored.DiscordWebhookUrl);
+        Assert.Equal(genericWebhook, restored.WebhookUrl);
     }
 
     [Fact]

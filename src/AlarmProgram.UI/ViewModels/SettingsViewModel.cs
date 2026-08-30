@@ -42,10 +42,16 @@ public sealed partial class SettingsViewModel : ObservableObject
     private string _discordWebhookUrl = string.Empty;
 
     [ObservableProperty]
+    private string _webhookUrl = string.Empty;
+
+    [ObservableProperty]
     private bool _telegramEnabled;
 
     [ObservableProperty]
     private bool _discordEnabled;
+
+    [ObservableProperty]
+    private bool _webhookEnabled;
 
     [ObservableProperty]
     private bool _notifyOnStartup = true;
@@ -96,6 +102,30 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _notifyOnAcPowerRestored = true;
 
     [ObservableProperty]
+    private bool _notifyOnProcessDown;
+
+    [ObservableProperty]
+    private string _watchedProcessNames = string.Empty;
+
+    [ObservableProperty]
+    private bool _notifyOnHighCpu;
+
+    [ObservableProperty]
+    private bool _notifyOnHighMemory;
+
+    [ObservableProperty]
+    private int _highCpuThresholdPercent = 90;
+
+    [ObservableProperty]
+    private int _highMemoryThresholdPercent = 90;
+
+    [ObservableProperty]
+    private bool _notifyOnRdpConnected;
+
+    [ObservableProperty]
+    private bool _notifyOnRdpDisconnected;
+
+    [ObservableProperty]
     private int _lowDiskSpaceThresholdPercent = 10;
 
     [ObservableProperty]
@@ -140,11 +170,13 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _testResultMessage = string.Empty;
 
-    public bool NeedsOnboarding => !TelegramEnabled && !DiscordEnabled;
+    public bool NeedsOnboarding => !TelegramEnabled && !DiscordEnabled && !WebhookEnabled;
 
     partial void OnTelegramEnabledChanged(bool value) => OnPropertyChanged(nameof(NeedsOnboarding));
 
     partial void OnDiscordEnabledChanged(bool value) => OnPropertyChanged(nameof(NeedsOnboarding));
+
+    partial void OnWebhookEnabledChanged(bool value) => OnPropertyChanged(nameof(NeedsOnboarding));
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -407,8 +439,10 @@ public sealed partial class SettingsViewModel : ObservableObject
         TelegramBotToken = TelegramBotToken.Trim(),
         TelegramChatId = TelegramChatId.Trim(),
         DiscordWebhookUrl = string.IsNullOrWhiteSpace(DiscordWebhookUrl) ? null : DiscordWebhookUrl.Trim(),
+        WebhookUrl = string.IsNullOrWhiteSpace(WebhookUrl) ? null : WebhookUrl.Trim(),
         TelegramEnabled = TelegramEnabled,
         DiscordEnabled = DiscordEnabled,
+        WebhookEnabled = WebhookEnabled,
         NotifyOnStartup = NotifyOnStartup,
         NotifyOnShutdown = NotifyOnShutdown,
         NotifyOnRestart = NotifyOnRestart,
@@ -425,6 +459,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         NotifyOnBatteryLow = NotifyOnBatteryLow,
         NotifyOnAcPowerLost = NotifyOnAcPowerLost,
         NotifyOnAcPowerRestored = NotifyOnAcPowerRestored,
+        NotifyOnProcessDown = NotifyOnProcessDown,
+        WatchedProcessNames = WatchedProcessNames.Trim(),
+        NotifyOnHighCpu = NotifyOnHighCpu,
+        NotifyOnHighMemory = NotifyOnHighMemory,
+        HighCpuThresholdPercent = HighCpuThresholdPercent,
+        HighMemoryThresholdPercent = HighMemoryThresholdPercent,
+        NotifyOnRdpConnected = NotifyOnRdpConnected,
+        NotifyOnRdpDisconnected = NotifyOnRdpDisconnected,
         LowDiskSpaceThresholdPercent = LowDiskSpaceThresholdPercent,
         BatteryLowThresholdPercent = BatteryLowThresholdPercent,
         AlertCooldownMinutes = AlertCooldownMinutes,
@@ -444,8 +486,10 @@ public sealed partial class SettingsViewModel : ObservableObject
         TelegramBotToken = settings.TelegramBotToken;
         TelegramChatId = settings.TelegramChatId;
         DiscordWebhookUrl = settings.DiscordWebhookUrl ?? string.Empty;
+        WebhookUrl = settings.WebhookUrl ?? string.Empty;
         TelegramEnabled = settings.TelegramEnabled;
         DiscordEnabled = settings.DiscordEnabled;
+        WebhookEnabled = settings.WebhookEnabled;
         NotifyOnStartup = settings.NotifyOnStartup;
         NotifyOnShutdown = settings.NotifyOnShutdown;
         NotifyOnRestart = settings.NotifyOnRestart;
@@ -462,6 +506,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         NotifyOnBatteryLow = settings.NotifyOnBatteryLow;
         NotifyOnAcPowerLost = settings.NotifyOnAcPowerLost;
         NotifyOnAcPowerRestored = settings.NotifyOnAcPowerRestored;
+        NotifyOnProcessDown = settings.NotifyOnProcessDown;
+        WatchedProcessNames = settings.WatchedProcessNames ?? string.Empty;
+        NotifyOnHighCpu = settings.NotifyOnHighCpu;
+        NotifyOnHighMemory = settings.NotifyOnHighMemory;
+        HighCpuThresholdPercent = settings.HighCpuThresholdPercent;
+        HighMemoryThresholdPercent = settings.HighMemoryThresholdPercent;
+        NotifyOnRdpConnected = settings.NotifyOnRdpConnected;
+        NotifyOnRdpDisconnected = settings.NotifyOnRdpDisconnected;
         LowDiskSpaceThresholdPercent = settings.LowDiskSpaceThresholdPercent;
         BatteryLowThresholdPercent = settings.BatteryLowThresholdPercent;
         AlertCooldownMinutes = settings.AlertCooldownMinutes;

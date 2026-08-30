@@ -11,4 +11,6 @@ public interface IAlertJournal
         CancellationToken cancellationToken = default);
 
     Task ExportCsvAsync(string filePath, CancellationToken cancellationToken = default);
+
+    Task ClearAsync(CancellationToken cancellationToken = default);
 }

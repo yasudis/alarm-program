@@ -47,4 +47,31 @@ public class SystemHealthRulesTests
         Assert.Equal(MachineEventType.SessionLock, SystemHealthRules.SessionLock().Type);
         Assert.Equal(MachineEventType.SessionUnlock, SystemHealthRules.SessionUnlock().Type);
     }
+
+    [Fact]
+    public void ProcessDown_returns_alert_only_when_process_is_missing()
+    {
+        var down = SystemHealthRules.ProcessDown("nginx", isRunning: false);
+        Assert.NotNull(down);
+        Assert.Equal(MachineEventType.ProcessDown, down.Type);
+        Assert.Contains("nginx", down.Message);
+        Assert.Null(SystemHealthRules.ProcessDown("nginx", isRunning: true));
+        Assert.Null(SystemHealthRules.ProcessDown(" ", isRunning: false));
+    }
+
+    [Fact]
+    public void HighCpu_and_HighMemory_alert_at_or_above_threshold()
+    {
+        Assert.NotNull(SystemHealthRules.HighCpu(90, thresholdPercent: 90));
+        Assert.Null(SystemHealthRules.HighCpu(89, thresholdPercent: 90));
+        Assert.NotNull(SystemHealthRules.HighMemory(95, thresholdPercent: 90));
+        Assert.Null(SystemHealthRules.HighMemory(40, thresholdPercent: 90));
+    }
+
+    [Fact]
+    public void Rdp_helpers_create_connect_and_disconnect_events()
+    {
+        Assert.Equal(MachineEventType.RdpConnected, SystemHealthRules.RdpConnected().Type);
+        Assert.Equal(MachineEventType.RdpDisconnected, SystemHealthRules.RdpDisconnected().Type);
+    }
 }

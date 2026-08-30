@@ -18,6 +18,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
     private readonly IPowerEventMonitor _powerEventMonitor;
     private readonly ISessionMonitor _sessionMonitor;
     private readonly IDiskSpaceMonitor _diskSpaceMonitor;
+    private readonly IProcessWatchdog _processWatchdog;
+    private readonly IResourceMonitor _resourceMonitor;
     private readonly IAlertMuteState _muteState;
     private readonly IWindowsEventLogWriter _windowsEventLogWriter;
     private readonly MonitoringOptions _monitoringOptions;
@@ -36,6 +38,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         IPowerEventMonitor powerEventMonitor,
         ISessionMonitor sessionMonitor,
         IDiskSpaceMonitor diskSpaceMonitor,
+        IProcessWatchdog processWatchdog,
+        IResourceMonitor resourceMonitor,
         IAlertMuteState muteState,
         IWindowsEventLogWriter windowsEventLogWriter,
         IOptions<MonitoringOptions> monitoringOptions,
@@ -49,6 +53,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _powerEventMonitor = powerEventMonitor;
         _sessionMonitor = sessionMonitor;
         _diskSpaceMonitor = diskSpaceMonitor;
+        _processWatchdog = processWatchdog;
+        _resourceMonitor = resourceMonitor;
         _muteState = muteState;
         _windowsEventLogWriter = windowsEventLogWriter;
         _monitoringOptions = monitoringOptions.Value;
@@ -143,10 +149,14 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _powerEventMonitor.PowerEventDetected += OnPowerEventDetected;
         _sessionMonitor.SessionEventDetected += OnExternalEventDetected;
         _diskSpaceMonitor.DiskEventDetected += OnExternalEventDetected;
+        _processWatchdog.ProcessEventDetected += OnExternalEventDetected;
+        _resourceMonitor.ResourceEventDetected += OnExternalEventDetected;
         _networkMonitor.Start();
         _powerEventMonitor.Start();
         _sessionMonitor.Start();
         _diskSpaceMonitor.Start();
+        _processWatchdog.Start();
+        _resourceMonitor.Start();
 
         SetRunning(true);
         await TryRecoverPreviousShutdownAsync(startupAt, stoppingToken);
@@ -166,6 +176,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
                     await TrySendHeartbeatAsync(stoppingToken);
                     var settings = await _settingsStore.LoadAsync(stoppingToken);
                     _diskSpaceMonitor.Poll(settings);
+                    _processWatchdog.Poll(settings);
+                    _resourceMonitor.Poll(settings);
                     _powerEventMonitor.Poll(settings);
                     await _orchestrator.FlushOutboxAsync(stoppingToken);
                 }
@@ -194,6 +206,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _powerEventMonitor.PowerEventDetected -= OnPowerEventDetected;
         _sessionMonitor.SessionEventDetected -= OnExternalEventDetected;
         _diskSpaceMonitor.DiskEventDetected -= OnExternalEventDetected;
+        _processWatchdog.ProcessEventDetected -= OnExternalEventDetected;
+        _resourceMonitor.ResourceEventDetected -= OnExternalEventDetected;
         SetRunning(false);
         _logger.LogInformation("Фоновый мониторинг событий остановлен");
     }
@@ -204,6 +218,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _powerEventMonitor.Dispose();
         _sessionMonitor.Dispose();
         _diskSpaceMonitor.Dispose();
+        _processWatchdog.Dispose();
+        _resourceMonitor.Dispose();
         base.Dispose();
     }
 

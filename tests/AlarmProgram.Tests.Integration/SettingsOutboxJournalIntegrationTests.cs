@@ -30,7 +30,14 @@ public class SettingsOutboxJournalIntegrationTests
             NotifyOnSystemResume = true,
             DisplayName = "Lab PC",
             AlertBodyTemplate = "{Subject} @ {Host}",
-            NotifyOnNetworkOffline = false
+            NotifyOnNetworkOffline = false,
+            WebhookEnabled = true,
+            WebhookUrl = "https://hooks.example.com/alarm",
+            NotifyOnProcessDown = true,
+            WatchedProcessNames = "nginx, notepad.exe",
+            NotifyOnHighCpu = true,
+            HighCpuThresholdPercent = 85,
+            NotifyOnRdpConnected = true
         };
 
         await store.SaveAsync(original);
@@ -48,6 +55,13 @@ public class SettingsOutboxJournalIntegrationTests
         Assert.True(restored.NotifyOnUserLogoff);
         Assert.True(restored.NotifyOnSystemResume);
         Assert.False(restored.NotifyOnNetworkOffline);
+        Assert.True(restored.WebhookEnabled);
+        Assert.Equal("https://hooks.example.com/alarm", restored.WebhookUrl);
+        Assert.True(restored.NotifyOnProcessDown);
+        Assert.Equal("nginx, notepad.exe", restored.WatchedProcessNames);
+        Assert.True(restored.NotifyOnHighCpu);
+        Assert.Equal(85, restored.HighCpuThresholdPercent);
+        Assert.True(restored.NotifyOnRdpConnected);
         Assert.Contains("123456789:AAExampleTelegramBotTokenValue123456", await File.ReadAllTextAsync(exportPath));
     }
 
@@ -119,6 +133,30 @@ public class SettingsOutboxJournalIntegrationTests
         Assert.StartsWith("Timestamp,EventType", lines[0]);
         Assert.Contains("SystemResume", lines[1]);
         Assert.Contains("Queued", lines[1]);
+    }
+
+    [Fact]
+    public async Task Journal_clear_empties_recent_entries()
+    {
+        var dir = CreateTempDir();
+        var journal = new FileAlertJournal(
+            Options.Create(new AlertJournalOptions
+            {
+                FilePath = Path.Combine(dir, "journal.json"),
+                MaxEntries = 20
+            }),
+            NullLogger<FileAlertJournal>.Instance);
+
+        await journal.AppendAsync(new AlertJournalEntry
+        {
+            Timestamp = DateTimeOffset.UtcNow,
+            EventType = MachineEventType.ProcessDown,
+            Subject = "Процесс не запущен",
+            Status = "Sent"
+        });
+
+        await journal.ClearAsync();
+        Assert.Empty(await journal.GetRecentAsync());
     }
 
     private static string CreateTempDir()

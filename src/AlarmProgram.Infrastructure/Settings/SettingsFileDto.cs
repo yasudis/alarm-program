@@ -8,9 +8,13 @@ internal sealed class SettingsFileDto
 
     public string? DiscordWebhookUrl { get; set; }
 
+    public string? WebhookUrl { get; set; }
+
     public bool TelegramEnabled { get; set; }
 
     public bool DiscordEnabled { get; set; }
+
+    public bool WebhookEnabled { get; set; }
 
     public bool NotifyOnStartup { get; set; } = true;
 
@@ -67,4 +71,20 @@ internal sealed class SettingsFileDto
     public int BatteryLowThresholdPercent { get; set; } = 15;
 
     public int AlertCooldownMinutes { get; set; }
+
+    public bool NotifyOnProcessDown { get; set; }
+
+    public string WatchedProcessNames { get; set; } = string.Empty;
+
+    public bool NotifyOnHighCpu { get; set; }
+
+    public bool NotifyOnHighMemory { get; set; }
+
+    public int HighCpuThresholdPercent { get; set; } = 90;
+
+    public int HighMemoryThresholdPercent { get; set; } = 90;
+
+    public bool NotifyOnRdpConnected { get; set; }
+
+    public bool NotifyOnRdpDisconnected { get; set; }
 }

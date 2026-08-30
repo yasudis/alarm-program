@@ -115,6 +115,20 @@ public sealed class FileAlertJournal : IAlertJournal
         }
     }
 
+    public async Task ClearAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            await WriteAllAsync([], cancellationToken);
+            _logger.LogInformation("Журнал алертов очищен: {Path}", _filePath);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     private async Task WriteAllAsync(List<AlertJournalEntry> entries, CancellationToken cancellationToken)
     {
         var directory = Path.GetDirectoryName(_filePath);

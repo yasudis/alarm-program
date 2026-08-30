@@ -16,9 +16,13 @@ public sealed class UserSettings
 
     public string? DiscordWebhookUrl { get; set; }
 
+    public string? WebhookUrl { get; set; }
+
     public bool TelegramEnabled { get; set; }
 
     public bool DiscordEnabled { get; set; }
+
+    public bool WebhookEnabled { get; set; }
 
     public bool NotifyOnStartup { get; set; } = true;
 
@@ -52,6 +56,22 @@ public sealed class UserSettings
 
     public bool NotifyOnAcPowerRestored { get; set; } = true;
 
+    public bool NotifyOnProcessDown { get; set; }
+
+    public string WatchedProcessNames { get; set; } = string.Empty;
+
+    public bool NotifyOnHighCpu { get; set; }
+
+    public bool NotifyOnHighMemory { get; set; }
+
+    public int HighCpuThresholdPercent { get; set; } = 90;
+
+    public int HighMemoryThresholdPercent { get; set; } = 90;
+
+    public bool NotifyOnRdpConnected { get; set; }
+
+    public bool NotifyOnRdpDisconnected { get; set; }
+
     public int LowDiskSpaceThresholdPercent { get; set; } = 10;
 
     public int BatteryLowThresholdPercent { get; set; } = 15;
@@ -78,7 +98,7 @@ public sealed class UserSettings
 
     public bool IsValid => Validate().Count == 0;
 
-    public bool HasEnabledChannel => TelegramEnabled || DiscordEnabled;
+    public bool HasEnabledChannel => TelegramEnabled || DiscordEnabled || WebhookEnabled;
 
     public bool IsEventEnabled(MachineEventType eventType) => eventType switch
     {
@@ -99,10 +119,17 @@ public sealed class UserSettings
         MachineEventType.BatteryLow => NotifyOnBatteryLow,
         MachineEventType.AcPowerLost => NotifyOnAcPowerLost,
         MachineEventType.AcPowerRestored => NotifyOnAcPowerRestored,
+        MachineEventType.ProcessDown => NotifyOnProcessDown,
+        MachineEventType.HighCpu => NotifyOnHighCpu,
+        MachineEventType.HighMemory => NotifyOnHighMemory,
+        MachineEventType.RdpConnected => NotifyOnRdpConnected,
+        MachineEventType.RdpDisconnected => NotifyOnRdpDisconnected,
         _ => false
     };
 
     public IReadOnlyList<string> GetTelegramChatIds() => ParseTelegramChatIds(TelegramChatId);
+
+    public IReadOnlyList<string> GetWatchedProcessNames() => ParseWatchedProcessNames(WatchedProcessNames);
 
     public static IReadOnlyList<string> ParseTelegramChatIds(string? raw)
     {
@@ -115,6 +142,37 @@ public sealed class UserSettings
             .Split([',', ';', '\n', '\r', ' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Distinct(StringComparer.Ordinal)
             .ToArray();
+    }
+
+    public static IReadOnlyList<string> ParseWatchedProcessNames(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return [];
+        }
+
+        return raw
+            .Split([',', ';', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(NormalizeProcessName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public static string NormalizeProcessName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = name.Trim().Trim('"');
+        if (trimmed.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+        {
+            trimmed = trimmed[..^4];
+        }
+
+        return trimmed;
     }
 
     public bool IsWithinQuietHours(DateTimeOffset timestamp)
@@ -177,6 +235,35 @@ public sealed class UserSettings
             }
         }
 
+        if (WebhookEnabled)
+        {
+            if (string.IsNullOrWhiteSpace(WebhookUrl))
+            {
+                errors.Add("HTTPS webhook URL обязателен.");
+            }
+            else if (!IsValidHttpsWebhook(WebhookUrl))
+            {
+                errors.Add("Некорректный формат HTTPS webhook URL.");
+            }
+        }
+
+        if (NotifyOnProcessDown)
+        {
+            var processNames = GetWatchedProcessNames();
+            if (processNames.Count == 0)
+            {
+                errors.Add("Укажите хотя бы одно имя процесса для watchdog.");
+            }
+            else if (processNames.Count > 10)
+            {
+                errors.Add("Можно указать не более 10 процессов.");
+            }
+            else if (processNames.Any(name => name.Length > 64 || name.Contains('\\') || name.Contains('/') || name.Contains(':')))
+            {
+                errors.Add("Некорректное имя процесса. Укажите имя без пути, например nginx или notepad.");
+            }
+        }
+
         if (HeartbeatEnabled && (HeartbeatIntervalMinutes < 5 || HeartbeatIntervalMinutes > 1440))
         {
             errors.Add("Интервал heartbeat должен быть от 5 до 1440 минут.");
@@ -220,6 +307,16 @@ public sealed class UserSettings
             errors.Add("Cooldown алертов должен быть от 0 до 1440 минут.");
         }
 
+        if (HighCpuThresholdPercent is < 50 or > 99)
+        {
+            errors.Add("Порог CPU должен быть от 50 до 99%.");
+        }
+
+        if (HighMemoryThresholdPercent is < 50 or > 99)
+        {
+            errors.Add("Порог памяти должен быть от 50 до 99%.");
+        }
+
         return errors;
     }
 
@@ -244,5 +341,20 @@ public sealed class UserSettings
 
         return isDiscordHost
             && uri.AbsolutePath.StartsWith("/api/webhooks/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsValidHttpsWebhook(string url)
+    {
+        if (url.Length > 2048)
+        {
+            return false;
+        }
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        return uri.Scheme == Uri.UriSchemeHttps && !string.IsNullOrWhiteSpace(uri.Host);
     }
 }

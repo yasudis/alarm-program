@@ -70,11 +70,12 @@ public partial class App : System.Windows.Application
         var settings = await _host.Services.GetRequiredService<ISettingsStore>().LoadAsync();
 
         logger.LogInformation(
-            "Приложение {ApplicationName} запущено в окружении {Environment}. Telegram: {TelegramEnabled}, Discord: {DiscordEnabled}",
+            "Приложение {ApplicationName} запущено в окружении {Environment}. Telegram: {TelegramEnabled}, Discord: {DiscordEnabled}, Webhook: {WebhookEnabled}",
             appOptions.ApplicationName,
             appOptions.Environment,
             settings.TelegramEnabled,
-            settings.DiscordEnabled);
+            settings.DiscordEnabled,
+            settings.WebhookEnabled);
 
         if (!settings.HasEnabledChannel)
         {

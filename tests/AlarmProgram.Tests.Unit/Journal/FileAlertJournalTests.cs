@@ -67,6 +67,26 @@ public class FileAlertJournalTests
         Assert.Contains("\"note,with,comma\"", csv);
     }
 
+    [Fact]
+    public async Task ClearAsync_removes_all_entries()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "AlarmProgramTests", Guid.NewGuid().ToString("N"), "journal.json");
+        var journal = CreateJournal(path);
+
+        await journal.AppendAsync(new AlertJournalEntry
+        {
+            Timestamp = DateTimeOffset.UtcNow,
+            EventType = MachineEventType.Startup,
+            Subject = "keep-me-not",
+            Status = "Sent"
+        });
+
+        await journal.ClearAsync();
+        var recent = await journal.GetRecentAsync(10);
+
+        Assert.Empty(recent);
+    }
+
     private static FileAlertJournal CreateJournal(string path) =>
         new(
             Options.Create(new AlertJournalOptions { FilePath = path, MaxEntries = 20 }),

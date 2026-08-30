@@ -109,6 +109,11 @@ public sealed class AlertFormatter : IAlertFormatter
         MachineEventType.BatteryLow => "Низкий заряд батареи",
         MachineEventType.AcPowerLost => "Переход на батарею",
         MachineEventType.AcPowerRestored => "Питание от сети восстановлено",
+        MachineEventType.ProcessDown => "Процесс не запущен",
+        MachineEventType.HighCpu => "Высокая загрузка CPU",
+        MachineEventType.HighMemory => "Высокое использование памяти",
+        MachineEventType.RdpConnected => "RDP-подключение",
+        MachineEventType.RdpDisconnected => "RDP-отключение",
         _ => "Событие ПК"
     };
 }

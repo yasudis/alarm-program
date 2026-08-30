@@ -10,6 +10,8 @@ using AlarmProgram.Infrastructure.Network;
 using AlarmProgram.Infrastructure.Notifications;
 using AlarmProgram.Infrastructure.Outbox;
 using AlarmProgram.Infrastructure.Power;
+using AlarmProgram.Infrastructure.ProcessWatch;
+using AlarmProgram.Infrastructure.Resources;
 using AlarmProgram.Infrastructure.Security;
 using AlarmProgram.Infrastructure.Session;
 using AlarmProgram.Infrastructure.Settings;
@@ -35,10 +37,13 @@ public static class DependencyInjection
         services.AddSingleton<IPowerEventMonitor, WindowsPowerEventMonitor>();
         services.AddSingleton<ISessionMonitor, WindowsSessionMonitor>();
         services.AddSingleton<IDiskSpaceMonitor, SystemDiskSpaceMonitor>();
+        services.AddSingleton<IProcessWatchdog, SystemProcessWatchdog>();
+        services.AddSingleton<IResourceMonitor, WindowsResourceMonitor>();
         services.AddSingleton<IEventCollector, WindowsEventLogReader>();
         services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromSeconds(30) });
         services.AddSingleton<INotificationChannel, TelegramNotificationChannel>();
         services.AddSingleton<INotificationChannel, DiscordNotificationChannel>();
+        services.AddSingleton<INotificationChannel, HttpWebhookNotificationChannel>();
 
         return services;
     }
