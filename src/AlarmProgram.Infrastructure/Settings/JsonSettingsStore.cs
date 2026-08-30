@@ -164,6 +164,13 @@ public sealed class JsonSettingsStore : ISettingsStore
         NotifyOnFailedLogon = dto.NotifyOnFailedLogon,
         NotifyOnApplicationCrash = dto.NotifyOnApplicationCrash,
         NotifyOnRebootPending = dto.NotifyOnRebootPending,
+        NotifyOnApplicationHang = dto.NotifyOnApplicationHang,
+        NotifyOnDefenderThreat = dto.NotifyOnDefenderThreat,
+        NotifyOnWindowsUpdateFailed = dto.NotifyOnWindowsUpdateFailed,
+        NotifyOnDiskError = dto.NotifyOnDiskError,
+        NotifyOnStatusSnapshot = dto.NotifyOnStatusSnapshot,
+        StartupGracePeriodMinutes = dto.StartupGracePeriodMinutes < 0 ? 0 : dto.StartupGracePeriodMinutes,
+        MaxAlertsPerHour = dto.MaxAlertsPerHour < 0 ? 0 : dto.MaxAlertsPerHour,
         PlaySoundOnCriticalAlerts = dto.PlaySoundOnCriticalAlerts,
         ShowTrayBalloonOnCriticalAlerts = dto.ShowTrayBalloonOnCriticalAlerts
     };
@@ -245,6 +252,13 @@ public sealed class JsonSettingsStore : ISettingsStore
         NotifyOnFailedLogon = settings.NotifyOnFailedLogon,
         NotifyOnApplicationCrash = settings.NotifyOnApplicationCrash,
         NotifyOnRebootPending = settings.NotifyOnRebootPending,
+        NotifyOnApplicationHang = settings.NotifyOnApplicationHang,
+        NotifyOnDefenderThreat = settings.NotifyOnDefenderThreat,
+        NotifyOnWindowsUpdateFailed = settings.NotifyOnWindowsUpdateFailed,
+        NotifyOnDiskError = settings.NotifyOnDiskError,
+        NotifyOnStatusSnapshot = settings.NotifyOnStatusSnapshot,
+        StartupGracePeriodMinutes = settings.StartupGracePeriodMinutes,
+        MaxAlertsPerHour = settings.MaxAlertsPerHour,
         PlaySoundOnCriticalAlerts = settings.PlaySoundOnCriticalAlerts,
         ShowTrayBalloonOnCriticalAlerts = settings.ShowTrayBalloonOnCriticalAlerts
     };

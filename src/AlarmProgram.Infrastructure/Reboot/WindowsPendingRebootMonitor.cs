@@ -28,6 +28,19 @@ public sealed class WindowsPendingRebootMonitor : IPendingRebootMonitor
 
     public event EventHandler<MachineEvent>? RebootEventDetected;
 
+    public bool IsRebootPending()
+    {
+        try
+        {
+            return _isPending();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Не удалось определить статус отложенной перезагрузки");
+            return false;
+        }
+    }
+
     public void Start()
     {
         lock (_sync)

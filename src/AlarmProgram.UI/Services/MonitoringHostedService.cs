@@ -25,6 +25,7 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
     private readonly IUsbDeviceMonitor _usbDeviceMonitor;
     private readonly IResourceMonitor _resourceMonitor;
     private readonly IPendingRebootMonitor _pendingRebootMonitor;
+    private readonly IHostUptimeProvider _uptimeProvider;
     private readonly IAlertMuteState _muteState;
     private readonly IWindowsEventLogWriter _windowsEventLogWriter;
     private readonly MonitoringOptions _monitoringOptions;
@@ -50,6 +51,7 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         IUsbDeviceMonitor usbDeviceMonitor,
         IResourceMonitor resourceMonitor,
         IPendingRebootMonitor pendingRebootMonitor,
+        IHostUptimeProvider uptimeProvider,
         IAlertMuteState muteState,
         IWindowsEventLogWriter windowsEventLogWriter,
         IOptions<MonitoringOptions> monitoringOptions,
@@ -69,6 +71,7 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _usbDeviceMonitor = usbDeviceMonitor;
         _resourceMonitor = resourceMonitor;
         _pendingRebootMonitor = pendingRebootMonitor;
+        _uptimeProvider = uptimeProvider;
         _muteState = muteState;
         _windowsEventLogWriter = windowsEventLogWriter;
         _monitoringOptions = monitoringOptions.Value;
@@ -330,7 +333,7 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
             Source = "AlarmProgram",
             EventId = null,
             HostName = Environment.MachineName,
-            Message = $"Периодический heartbeat каждые {intervalMinutes} мин. IP={_networkMonitor.CurrentPrimaryIp ?? "-"}"
+            Message = $"Периодический heartbeat каждые {intervalMinutes} мин. IP={_networkMonitor.CurrentPrimaryIp ?? "-"}, Uptime={HostUptimeFormatter.Format(_uptimeProvider.GetUptime())}"
         };
 
         await _orchestrator.ProcessMachineEventAsync(heartbeat, settings, cancellationToken);

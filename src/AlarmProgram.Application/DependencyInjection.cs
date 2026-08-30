@@ -2,6 +2,7 @@ using AlarmProgram.Application.Abstractions;
 using AlarmProgram.Application.Alerts;
 using AlarmProgram.Application.Configuration;
 using AlarmProgram.Application.Events;
+using AlarmProgram.Application.Health;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AlarmProgram.Application;
@@ -29,6 +30,7 @@ public static class DependencyInjection
             .BindConfiguration(AlertOutboxOptions.SectionName);
 
         services.AddSingleton<IEventClassifier, EventClassifier>();
+        services.AddSingleton<IHostUptimeProvider, TickCountHostUptimeProvider>();
         services.AddSingleton<IAlertFormatter, AlertFormatter>();
         services.AddSingleton<AlertFilter>();
         services.AddSingleton<IAlertMuteState, AlertMuteState>();

@@ -9,4 +9,6 @@ public interface IPendingRebootMonitor : IDisposable
     void Start();
 
     void Poll(UserSettings settings);
+
+    bool IsRebootPending();
 }

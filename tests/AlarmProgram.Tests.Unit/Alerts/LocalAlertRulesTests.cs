@@ -9,6 +9,9 @@ public class LocalAlertRulesTests
     [InlineData(MachineEventType.UnexpectedShutdown, true)]
     [InlineData(MachineEventType.ProcessDown, true)]
     [InlineData(MachineEventType.ServiceDown, true)]
+    [InlineData(MachineEventType.ApplicationHang, true)]
+    [InlineData(MachineEventType.DefenderThreat, true)]
+    [InlineData(MachineEventType.DiskError, true)]
     [InlineData(MachineEventType.FailedLogon, false)]
     [InlineData(MachineEventType.Startup, false)]
     public void ShouldPlaySound_covers_critical_watchdog_events(MachineEventType type, bool expected)
@@ -21,6 +24,7 @@ public class LocalAlertRulesTests
     [InlineData(MachineEventType.FailedLogon, true)]
     [InlineData(MachineEventType.ApplicationCrash, true)]
     [InlineData(MachineEventType.RebootPending, true)]
+    [InlineData(MachineEventType.WindowsUpdateFailed, true)]
     [InlineData(MachineEventType.Heartbeat, false)]
     public void ShouldShowBalloon_covers_critical_and_security_events(MachineEventType type, bool expected)
     {

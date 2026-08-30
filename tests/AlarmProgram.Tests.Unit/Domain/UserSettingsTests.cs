@@ -282,7 +282,12 @@ public class UserSettingsTests
             DailyDigestEnabled = true,
             NotifyOnFailedLogon = false,
             NotifyOnApplicationCrash = true,
-            NotifyOnRebootPending = false
+            NotifyOnRebootPending = false,
+            NotifyOnApplicationHang = true,
+            NotifyOnDefenderThreat = false,
+            NotifyOnWindowsUpdateFailed = true,
+            NotifyOnDiskError = true,
+            NotifyOnStatusSnapshot = false
         };
 
         Assert.True(settings.IsEventEnabled(MachineEventType.ServiceDown));
@@ -292,6 +297,25 @@ public class UserSettingsTests
         Assert.False(settings.IsEventEnabled(MachineEventType.FailedLogon));
         Assert.True(settings.IsEventEnabled(MachineEventType.ApplicationCrash));
         Assert.False(settings.IsEventEnabled(MachineEventType.RebootPending));
+        Assert.True(settings.IsEventEnabled(MachineEventType.ApplicationHang));
+        Assert.False(settings.IsEventEnabled(MachineEventType.DefenderThreat));
+        Assert.True(settings.IsEventEnabled(MachineEventType.WindowsUpdateFailed));
+        Assert.True(settings.IsEventEnabled(MachineEventType.DiskError));
+        Assert.False(settings.IsEventEnabled(MachineEventType.StatusSnapshot));
+    }
+
+    [Fact]
+    public void Validate_rejects_invalid_grace_and_rate_limit()
+    {
+        var settings = new UserSettings
+        {
+            StartupGracePeriodMinutes = 90,
+            MaxAlertsPerHour = 500
+        };
+
+        var errors = settings.Validate();
+        Assert.Contains(errors, error => error.Contains("после старта", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(errors, error => error.Contains("алертов в час", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

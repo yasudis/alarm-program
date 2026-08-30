@@ -60,4 +60,14 @@ public class WindowsPendingRebootMonitorTests
 
         Assert.Empty(captured);
     }
+
+    [Fact]
+    public void IsRebootPending_uses_injected_detector()
+    {
+        var monitor = new WindowsPendingRebootMonitor(
+            NullLogger<WindowsPendingRebootMonitor>.Instance,
+            () => true);
+
+        Assert.True(monitor.IsRebootPending());
+    }
 }

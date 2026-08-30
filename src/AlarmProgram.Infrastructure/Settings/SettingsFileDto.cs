@@ -124,6 +124,20 @@ internal sealed class SettingsFileDto
 
     public bool NotifyOnRebootPending { get; set; } = true;
 
+    public bool NotifyOnApplicationHang { get; set; } = true;
+
+    public bool NotifyOnDefenderThreat { get; set; } = true;
+
+    public bool NotifyOnWindowsUpdateFailed { get; set; } = true;
+
+    public bool NotifyOnDiskError { get; set; } = true;
+
+    public bool NotifyOnStatusSnapshot { get; set; } = true;
+
+    public int StartupGracePeriodMinutes { get; set; }
+
+    public int MaxAlertsPerHour { get; set; }
+
     public bool PlaySoundOnCriticalAlerts { get; set; } = true;
 
     public bool ShowTrayBalloonOnCriticalAlerts { get; set; } = true;

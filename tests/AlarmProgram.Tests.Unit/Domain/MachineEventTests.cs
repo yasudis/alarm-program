@@ -21,6 +21,11 @@ public class MachineEventTests
     [InlineData(MachineEventType.FailedLogon)]
     [InlineData(MachineEventType.ApplicationCrash)]
     [InlineData(MachineEventType.RebootPending)]
+    [InlineData(MachineEventType.ApplicationHang)]
+    [InlineData(MachineEventType.DefenderThreat)]
+    [InlineData(MachineEventType.WindowsUpdateFailed)]
+    [InlineData(MachineEventType.DiskError)]
+    [InlineData(MachineEventType.StatusSnapshot)]
     public void MachineEvent_supports_core_event_types(MachineEventType eventType)
     {
         var machineEvent = new MachineEvent

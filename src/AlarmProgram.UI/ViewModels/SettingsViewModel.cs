@@ -180,6 +180,27 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _notifyOnRebootPending = true;
 
     [ObservableProperty]
+    private bool _notifyOnApplicationHang = true;
+
+    [ObservableProperty]
+    private bool _notifyOnDefenderThreat = true;
+
+    [ObservableProperty]
+    private bool _notifyOnWindowsUpdateFailed = true;
+
+    [ObservableProperty]
+    private bool _notifyOnDiskError = true;
+
+    [ObservableProperty]
+    private bool _notifyOnStatusSnapshot = true;
+
+    [ObservableProperty]
+    private int _startupGracePeriodMinutes;
+
+    [ObservableProperty]
+    private int _maxAlertsPerHour;
+
+    [ObservableProperty]
     private bool _playSoundOnCriticalAlerts = true;
 
     [ObservableProperty]
@@ -547,6 +568,13 @@ public sealed partial class SettingsViewModel : ObservableObject
         NotifyOnFailedLogon = NotifyOnFailedLogon,
         NotifyOnApplicationCrash = NotifyOnApplicationCrash,
         NotifyOnRebootPending = NotifyOnRebootPending,
+        NotifyOnApplicationHang = NotifyOnApplicationHang,
+        NotifyOnDefenderThreat = NotifyOnDefenderThreat,
+        NotifyOnWindowsUpdateFailed = NotifyOnWindowsUpdateFailed,
+        NotifyOnDiskError = NotifyOnDiskError,
+        NotifyOnStatusSnapshot = NotifyOnStatusSnapshot,
+        StartupGracePeriodMinutes = StartupGracePeriodMinutes,
+        MaxAlertsPerHour = MaxAlertsPerHour,
         PlaySoundOnCriticalAlerts = PlaySoundOnCriticalAlerts,
         ShowTrayBalloonOnCriticalAlerts = ShowTrayBalloonOnCriticalAlerts,
         LowDiskSpaceThresholdPercent = LowDiskSpaceThresholdPercent,
@@ -614,6 +642,13 @@ public sealed partial class SettingsViewModel : ObservableObject
         NotifyOnFailedLogon = settings.NotifyOnFailedLogon;
         NotifyOnApplicationCrash = settings.NotifyOnApplicationCrash;
         NotifyOnRebootPending = settings.NotifyOnRebootPending;
+        NotifyOnApplicationHang = settings.NotifyOnApplicationHang;
+        NotifyOnDefenderThreat = settings.NotifyOnDefenderThreat;
+        NotifyOnWindowsUpdateFailed = settings.NotifyOnWindowsUpdateFailed;
+        NotifyOnDiskError = settings.NotifyOnDiskError;
+        NotifyOnStatusSnapshot = settings.NotifyOnStatusSnapshot;
+        StartupGracePeriodMinutes = settings.StartupGracePeriodMinutes;
+        MaxAlertsPerHour = settings.MaxAlertsPerHour;
         PlaySoundOnCriticalAlerts = settings.PlaySoundOnCriticalAlerts;
         ShowTrayBalloonOnCriticalAlerts = settings.ShowTrayBalloonOnCriticalAlerts;
         LowDiskSpaceThresholdPercent = settings.LowDiskSpaceThresholdPercent;

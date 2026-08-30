@@ -12,10 +12,19 @@ public sealed class AlertFilter
         UserSettings settings,
         IAlertMuteState? muteState,
         DateTimeOffset? lastSentOfType,
-        DateTimeOffset? now = null)
+        DateTimeOffset? now = null,
+        DateTimeOffset? monitoringStartedAt = null,
+        int sentCountInLastHour = 0)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        return ShouldRaiseLocally(machineEvent, settings, muteState, lastSentOfType, now)
+        return ShouldRaiseLocally(
+                   machineEvent,
+                   settings,
+                   muteState,
+                   lastSentOfType,
+                   now,
+                   monitoringStartedAt,
+                   sentCountInLastHour)
                && settings.HasEnabledChannel;
     }
 
@@ -24,7 +33,9 @@ public sealed class AlertFilter
         UserSettings settings,
         IAlertMuteState? muteState,
         DateTimeOffset? lastSentOfType,
-        DateTimeOffset? now = null)
+        DateTimeOffset? now = null,
+        DateTimeOffset? monitoringStartedAt = null,
+        int sentCountInLastHour = 0)
     {
         ArgumentNullException.ThrowIfNull(machineEvent);
         ArgumentNullException.ThrowIfNull(settings);
@@ -34,8 +45,14 @@ public sealed class AlertFilter
             return false;
         }
 
+        if (LocalAlertRules.IsUserRequested(machineEvent.Type))
+        {
+            return true;
+        }
+
         var timestamp = now ?? DateTimeOffset.UtcNow;
         var isCritical = machineEvent.Type == MachineEventType.UnexpectedShutdown;
+        var bypassesAntiSpam = isCritical || LocalAlertRules.BypassesAntiSpam(machineEvent.Type);
 
         if (!isCritical && settings.IsWithinQuietHours(machineEvent.OccurredAt))
         {
@@ -51,6 +68,21 @@ public sealed class AlertFilter
             && settings.AlertCooldownMinutes > 0
             && lastSentOfType is { } lastSent
             && timestamp - lastSent < TimeSpan.FromMinutes(settings.AlertCooldownMinutes))
+        {
+            return false;
+        }
+
+        if (!bypassesAntiSpam
+            && settings.StartupGracePeriodMinutes > 0
+            && monitoringStartedAt is { } startedAt
+            && timestamp - startedAt < TimeSpan.FromMinutes(settings.StartupGracePeriodMinutes))
+        {
+            return false;
+        }
+
+        if (!bypassesAntiSpam
+            && settings.MaxAlertsPerHour > 0
+            && sentCountInLastHour >= settings.MaxAlertsPerHour)
         {
             return false;
         }

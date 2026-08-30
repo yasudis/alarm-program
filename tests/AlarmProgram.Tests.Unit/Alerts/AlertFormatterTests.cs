@@ -1,3 +1,4 @@
+using AlarmProgram.Application.Abstractions;
 using AlarmProgram.Application.Alerts;
 using AlarmProgram.Domain;
 
@@ -38,6 +39,11 @@ public class AlertFormatterTests
     [InlineData(MachineEventType.FailedLogon, "Неудачный вход в Windows")]
     [InlineData(MachineEventType.ApplicationCrash, "Падение приложения")]
     [InlineData(MachineEventType.RebootPending, "Требуется перезагрузка Windows")]
+    [InlineData(MachineEventType.ApplicationHang, "Приложение не отвечает")]
+    [InlineData(MachineEventType.DefenderThreat, "Угроза Windows Defender")]
+    [InlineData(MachineEventType.WindowsUpdateFailed, "Сбой обновления Windows")]
+    [InlineData(MachineEventType.DiskError, "Ошибка диска")]
+    [InlineData(MachineEventType.StatusSnapshot, "Статус ПК")]
     public void Format_uses_stable_subject_and_includes_host_and_timestamp(
         MachineEventType eventType,
         string expectedSubject)
@@ -53,6 +59,7 @@ public class AlertFormatterTests
         Assert.Contains("Время: 2026-08-24 10:30:00 UTC", alert.Body);
         Assert.Contains($"Тип: {eventType}", alert.Body);
         Assert.Contains("Источник: EventLog (Event ID 6005)", alert.Body);
+        Assert.Contains("Uptime:", alert.Body);
         Assert.Contains("CorrelationId:", alert.Body);
         Assert.Contains("Kernel details", alert.Body);
     }
@@ -93,16 +100,19 @@ public class AlertFormatterTests
         var settings = new UserSettings
         {
             DisplayName = "Домашний ПК",
-            AlertBodyTemplate = "{Subject} | {DisplayName} | {Host} | {Type} | {Message}"
+            AlertBodyTemplate = "{Subject} | {DisplayName} | {Host} | {Type} | {Message} | {Uptime}"
         };
 
-        var alert = _formatter.Format(CreateEvent(MachineEventType.IpChanged, "old -> new"), settings);
+        var alert = new AlertFormatter(new FixedUptimeProvider(TimeSpan.FromHours(3))).Format(
+            CreateEvent(MachineEventType.IpChanged, "old -> new"),
+            settings);
 
         Assert.Equal("Сменился IP-адрес", alert.Subject);
         Assert.Equal("Домашний ПК (TEST-PC)", alert.HostName);
         Assert.Contains("Домашний ПК", alert.Body);
         Assert.Contains("IpChanged", alert.Body);
         Assert.Contains("old -> new", alert.Body);
+        Assert.Contains("3ч 0м", alert.Body);
     }
 
     [Fact]
@@ -120,4 +130,9 @@ public class AlertFormatterTests
         HostName = "TEST-PC",
         Message = message
     };
+
+    private sealed class FixedUptimeProvider(TimeSpan uptime) : IHostUptimeProvider
+    {
+        public TimeSpan GetUptime() => uptime;
+    }
 }
