@@ -153,6 +153,32 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private async Task ClearJournalAsync()
+    {
+        try
+        {
+            var confirm = System.Windows.MessageBox.Show(
+                "Очистить журнал последних алертов?",
+                "Alarm Program",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Question);
+            if (confirm != System.Windows.MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            await _alertJournal.ClearAsync();
+            await RefreshJournalAsync(CancellationToken.None);
+            StatusMessage = "Журнал алертов очищен.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Не удалось очистить журнал алертов");
+            StatusMessage = "Не удалось очистить журнал.";
+        }
+    }
+
     private bool CanPause() => !_monitoringController.IsPaused;
 
     private bool CanResume() => _monitoringController.IsPaused;
@@ -187,7 +213,7 @@ public sealed partial class MainViewModel : ObservableObject
             var settings = await _settingsStore.LoadAsync(cancellationToken);
             SetupHint = settings.HasEnabledChannel
                 ? string.Empty
-                : "Первый запуск: включите Telegram или Discord, укажите токен и Chat ID, сохраните настройки и нажмите «Тестовая отправка».";
+                : "Первый запуск: включите Telegram, Discord или HTTPS webhook, заполните поля, сохраните настройки и нажмите «Тестовая отправка».";
         }
         catch (Exception ex)
         {

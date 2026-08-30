@@ -100,6 +100,12 @@ public sealed class JsonSettingsStore : ISettingsStore
                 : dto.DiscordWebhookUrl,
         TelegramEnabled = dto.TelegramEnabled,
         DiscordEnabled = dto.DiscordEnabled,
+        WebhookEnabled = dto.WebhookEnabled,
+        WebhookUrl = string.IsNullOrEmpty(dto.WebhookUrl)
+            ? dto.WebhookUrl
+            : decryptSecrets
+                ? _secretProtector.Unprotect(dto.WebhookUrl)
+                : dto.WebhookUrl,
         NotifyOnStartup = dto.NotifyOnStartup,
         NotifyOnShutdown = dto.NotifyOnShutdown,
         NotifyOnRestart = dto.NotifyOnRestart,
@@ -127,7 +133,15 @@ public sealed class JsonSettingsStore : ISettingsStore
         NotifyOnAcPowerRestored = dto.NotifyOnAcPowerRestored,
         LowDiskSpaceThresholdPercent = dto.LowDiskSpaceThresholdPercent <= 0 ? 10 : dto.LowDiskSpaceThresholdPercent,
         BatteryLowThresholdPercent = dto.BatteryLowThresholdPercent <= 0 ? 15 : dto.BatteryLowThresholdPercent,
-        AlertCooldownMinutes = dto.AlertCooldownMinutes < 0 ? 0 : dto.AlertCooldownMinutes
+        AlertCooldownMinutes = dto.AlertCooldownMinutes < 0 ? 0 : dto.AlertCooldownMinutes,
+        NotifyOnProcessDown = dto.NotifyOnProcessDown,
+        WatchedProcessNames = dto.WatchedProcessNames ?? string.Empty,
+        NotifyOnHighCpu = dto.NotifyOnHighCpu,
+        NotifyOnHighMemory = dto.NotifyOnHighMemory,
+        HighCpuThresholdPercent = dto.HighCpuThresholdPercent <= 0 ? 90 : dto.HighCpuThresholdPercent,
+        HighMemoryThresholdPercent = dto.HighMemoryThresholdPercent <= 0 ? 90 : dto.HighMemoryThresholdPercent,
+        NotifyOnRdpConnected = dto.NotifyOnRdpConnected,
+        NotifyOnRdpDisconnected = dto.NotifyOnRdpDisconnected
     };
 
     private SettingsFileDto MapToDto(UserSettings settings, bool encryptSecrets) => new()
@@ -143,6 +157,12 @@ public sealed class JsonSettingsStore : ISettingsStore
                 : settings.DiscordWebhookUrl,
         TelegramEnabled = settings.TelegramEnabled,
         DiscordEnabled = settings.DiscordEnabled,
+        WebhookEnabled = settings.WebhookEnabled,
+        WebhookUrl = string.IsNullOrEmpty(settings.WebhookUrl)
+            ? settings.WebhookUrl
+            : encryptSecrets
+                ? _secretProtector.Protect(settings.WebhookUrl)
+                : settings.WebhookUrl,
         NotifyOnStartup = settings.NotifyOnStartup,
         NotifyOnShutdown = settings.NotifyOnShutdown,
         NotifyOnRestart = settings.NotifyOnRestart,
@@ -170,7 +190,15 @@ public sealed class JsonSettingsStore : ISettingsStore
         NotifyOnAcPowerRestored = settings.NotifyOnAcPowerRestored,
         LowDiskSpaceThresholdPercent = settings.LowDiskSpaceThresholdPercent,
         BatteryLowThresholdPercent = settings.BatteryLowThresholdPercent,
-        AlertCooldownMinutes = settings.AlertCooldownMinutes
+        AlertCooldownMinutes = settings.AlertCooldownMinutes,
+        NotifyOnProcessDown = settings.NotifyOnProcessDown,
+        WatchedProcessNames = settings.WatchedProcessNames ?? string.Empty,
+        NotifyOnHighCpu = settings.NotifyOnHighCpu,
+        NotifyOnHighMemory = settings.NotifyOnHighMemory,
+        HighCpuThresholdPercent = settings.HighCpuThresholdPercent,
+        HighMemoryThresholdPercent = settings.HighMemoryThresholdPercent,
+        NotifyOnRdpConnected = settings.NotifyOnRdpConnected,
+        NotifyOnRdpDisconnected = settings.NotifyOnRdpDisconnected
     };
 
     private static async Task WriteDtoAsync(

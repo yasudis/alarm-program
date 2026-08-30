@@ -26,6 +26,11 @@ public class AlertFormatterTests
     [InlineData(MachineEventType.BatteryLow, "Низкий заряд батареи")]
     [InlineData(MachineEventType.AcPowerLost, "Переход на батарею")]
     [InlineData(MachineEventType.AcPowerRestored, "Питание от сети восстановлено")]
+    [InlineData(MachineEventType.ProcessDown, "Процесс не запущен")]
+    [InlineData(MachineEventType.HighCpu, "Высокая загрузка CPU")]
+    [InlineData(MachineEventType.HighMemory, "Высокое использование памяти")]
+    [InlineData(MachineEventType.RdpConnected, "RDP-подключение")]
+    [InlineData(MachineEventType.RdpDisconnected, "RDP-отключение")]
     public void Format_uses_stable_subject_and_includes_host_and_timestamp(
         MachineEventType eventType,
         string expectedSubject)

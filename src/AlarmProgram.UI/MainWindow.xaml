@@ -102,6 +102,13 @@
                                Text="Discord Webhook URL" />
                     <TextBox Text="{Binding Settings.DiscordWebhookUrl, UpdateSourceTrigger=PropertyChanged}" />
 
+                    <CheckBox Margin="0,16,0,0"
+                              Content="Включить HTTPS webhook"
+                              IsChecked="{Binding Settings.WebhookEnabled}" />
+                    <TextBlock Margin="0,8,0,0"
+                               Text="HTTPS Webhook URL" />
+                    <TextBox Text="{Binding Settings.WebhookUrl, UpdateSourceTrigger=PropertyChanged}" />
+
                     <TextBlock Margin="0,16,0,0"
                                FontWeight="SemiBold"
                                Text="Типы событий" />
@@ -154,6 +161,21 @@
                         <CheckBox Margin="0,0,16,8"
                                   Content="AC power restored"
                                   IsChecked="{Binding Settings.NotifyOnAcPowerRestored}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Process down"
+                                  IsChecked="{Binding Settings.NotifyOnProcessDown}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="High CPU"
+                                  IsChecked="{Binding Settings.NotifyOnHighCpu}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="High memory"
+                                  IsChecked="{Binding Settings.NotifyOnHighMemory}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="RDP connected"
+                                  IsChecked="{Binding Settings.NotifyOnRdpConnected}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="RDP disconnected"
+                                  IsChecked="{Binding Settings.NotifyOnRdpDisconnected}" />
                     </WrapPanel>
 
                     <TextBlock Margin="0,8,0,0"
@@ -206,6 +228,26 @@
                                  Margin="8,0,0,0"
                                  Text="{Binding Settings.AlertCooldownMinutes, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock VerticalAlignment="Center" Text="CPU, %:" />
+                        <TextBox Width="60"
+                                 Margin="8,0,16,0"
+                                 Text="{Binding Settings.HighCpuThresholdPercent, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock VerticalAlignment="Center" Text="Память, %:" />
+                        <TextBox Width="60"
+                                 Margin="8,0,0,0"
+                                 Text="{Binding Settings.HighMemoryThresholdPercent, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                    <TextBlock Margin="0,12,0,0"
+                               FontWeight="SemiBold"
+                               Text="Watchdog процессов" />
+                    <TextBlock Margin="0,4,0,0"
+                               Foreground="#FF666666"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Text="Имена через запятую, без пути: nginx, notepad, mysqld" />
+                    <TextBox Margin="0,8,0,0"
+                             Text="{Binding Settings.WatchedProcessNames, UpdateSourceTrigger=PropertyChanged}" />
 
                     <TextBlock Margin="0,12,0,0"
                                FontWeight="SemiBold"
@@ -279,6 +321,11 @@
                                 Margin="8,0,0,0"
                                 Content="Экспорт CSV"
                                 Command="{Binding ExportJournalCommand}" />
+                        <Button Width="140"
+                                Height="28"
+                                Margin="8,0,0,0"
+                                Content="Очистить журнал"
+                                Command="{Binding ClearJournalCommand}" />
                     </WrapPanel>
                     <TextBlock FontSize="16"
                                FontWeight="SemiBold"

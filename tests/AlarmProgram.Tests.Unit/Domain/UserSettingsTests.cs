@@ -208,4 +208,66 @@ public class UserSettingsTests
         Assert.True(settings.IsEventEnabled(MachineEventType.AcPowerLost));
         Assert.False(settings.IsEventEnabled(MachineEventType.AcPowerRestored));
     }
+
+    [Fact]
+    public void HasEnabledChannel_includes_https_webhook()
+    {
+        var settings = new UserSettings
+        {
+            WebhookEnabled = true,
+            WebhookUrl = "https://example.com/hooks/alarm"
+        };
+
+        Assert.True(settings.HasEnabledChannel);
+        Assert.True(settings.IsValid);
+    }
+
+    [Fact]
+    public void Validate_rejects_http_webhook()
+    {
+        var settings = new UserSettings
+        {
+            WebhookEnabled = true,
+            WebhookUrl = "http://example.com/hook"
+        };
+
+        Assert.False(settings.IsValid);
+        Assert.Contains(settings.Validate(), error => error.Contains("HTTPS webhook", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ParseWatchedProcessNames_strips_exe_and_deduplicates()
+    {
+        var names = UserSettings.ParseWatchedProcessNames("nginx.exe, notepad, NGINX");
+
+        Assert.Equal(new[] { "nginx", "notepad" }, names);
+    }
+
+    [Fact]
+    public void Validate_requires_process_names_when_watchdog_enabled()
+    {
+        var settings = new UserSettings { NotifyOnProcessDown = true };
+
+        Assert.False(settings.IsValid);
+        Assert.Contains(settings.Validate(), error => error.Contains("процесса", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void IsEventEnabled_covers_watchdog_resources_and_rdp()
+    {
+        var settings = new UserSettings
+        {
+            NotifyOnProcessDown = true,
+            NotifyOnHighCpu = true,
+            NotifyOnHighMemory = false,
+            NotifyOnRdpConnected = true,
+            NotifyOnRdpDisconnected = false
+        };
+
+        Assert.True(settings.IsEventEnabled(MachineEventType.ProcessDown));
+        Assert.True(settings.IsEventEnabled(MachineEventType.HighCpu));
+        Assert.False(settings.IsEventEnabled(MachineEventType.HighMemory));
+        Assert.True(settings.IsEventEnabled(MachineEventType.RdpConnected));
+        Assert.False(settings.IsEventEnabled(MachineEventType.RdpDisconnected));
+    }
 }

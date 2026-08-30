@@ -19,5 +19,10 @@ public enum MachineEventType
     LowDiskSpace = 14,
     BatteryLow = 15,
     AcPowerLost = 16,
-    AcPowerRestored = 17
+    AcPowerRestored = 17,
+    ProcessDown = 18,
+    HighCpu = 19,
+    HighMemory = 20,
+    RdpConnected = 21,
+    RdpDisconnected = 22
 }

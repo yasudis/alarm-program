@@ -58,6 +58,51 @@ public static class SystemHealthRules
     public static MachineEvent SessionUnlock() =>
         Create(MachineEventType.SessionUnlock, "SessionMonitor", "Сессия Windows разблокирована.");
 
+    public static MachineEvent RdpConnected() =>
+        Create(MachineEventType.RdpConnected, "SessionMonitor", "Установлено удалённое подключение (RDP).");
+
+    public static MachineEvent RdpDisconnected() =>
+        Create(MachineEventType.RdpDisconnected, "SessionMonitor", "Удалённое подключение (RDP) разорвано.");
+
+    public static MachineEvent? ProcessDown(string processName, bool isRunning)
+    {
+        if (string.IsNullOrWhiteSpace(processName) || isRunning)
+        {
+            return null;
+        }
+
+        return Create(
+            MachineEventType.ProcessDown,
+            "ProcessWatchdog",
+            $"Процесс {processName} не запущен.");
+    }
+
+    public static MachineEvent? HighCpu(int percent, int thresholdPercent)
+    {
+        if (percent is < 0 or > 100 || percent < thresholdPercent)
+        {
+            return null;
+        }
+
+        return Create(
+            MachineEventType.HighCpu,
+            "ResourceMonitor",
+            $"Загрузка CPU {percent}%. Порог {thresholdPercent}%.");
+    }
+
+    public static MachineEvent? HighMemory(int percent, int thresholdPercent)
+    {
+        if (percent is < 0 or > 100 || percent < thresholdPercent)
+        {
+            return null;
+        }
+
+        return Create(
+            MachineEventType.HighMemory,
+            "ResourceMonitor",
+            $"Использование памяти {percent}%. Порог {thresholdPercent}%.");
+    }
+
     private static MachineEvent Create(MachineEventType type, string source, string message) => new()
     {
         Type = type,
