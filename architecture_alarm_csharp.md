@@ -46,7 +46,8 @@ tests/
 
 - `IEventCollector` - получает системные события.
 - `IEventClassifier` - классифицирует сырые события в доменные.
-- `IAlertFormatter` - форматирует сообщение.
+- `IAlertFormatter` - форматирует сообщение (включая `{Uptime}`).
+- `IHostUptimeProvider` - время работы хоста для heartbeat и снимка статуса.
 - `INotificationChannel` - общий контракт отправки.
 - `AlertOrchestrator` - главный pipeline:
   1) получить событие;

@@ -51,6 +51,16 @@
                             Margin="8,0,0,0"
                             Content="Тишина 30 мин"
                             Command="{Binding MuteFor30MinutesCommand}" />
+                    <Button Width="150"
+                            Height="30"
+                            Margin="8,0,0,0"
+                            Content="Отправить статус"
+                            Command="{Binding SendStatusSnapshotCommand}" />
+                    <Button Width="160"
+                            Height="30"
+                            Margin="8,0,0,0"
+                            Content="Копировать диагн."
+                            Command="{Binding CopyDiagnosticsCommand}" />
                     <Button Width="140"
                             Height="30"
                             Margin="8,0,0,0"
@@ -228,6 +238,21 @@
                         <CheckBox Margin="0,0,16,8"
                                   Content="Reboot pending"
                                   IsChecked="{Binding Settings.NotifyOnRebootPending}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Application hang"
+                                  IsChecked="{Binding Settings.NotifyOnApplicationHang}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Defender threat"
+                                  IsChecked="{Binding Settings.NotifyOnDefenderThreat}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Windows Update failed"
+                                  IsChecked="{Binding Settings.NotifyOnWindowsUpdateFailed}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Disk error"
+                                  IsChecked="{Binding Settings.NotifyOnDiskError}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Status snapshot"
+                                  IsChecked="{Binding Settings.NotifyOnStatusSnapshot}" />
                     </WrapPanel>
 
                     <TextBlock Margin="0,8,0,0"
@@ -292,8 +317,16 @@
                                  Text="{Binding Settings.BatteryLowThresholdPercent, UpdateSourceTrigger=PropertyChanged}" />
                         <TextBlock VerticalAlignment="Center" Text="Cooldown, мин:" />
                         <TextBox Width="60"
-                                 Margin="8,0,0,0"
+                                 Margin="8,0,16,0"
                                  Text="{Binding Settings.AlertCooldownMinutes, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock VerticalAlignment="Center" Text="Тишина после старта, мин:" />
+                        <TextBox Width="60"
+                                 Margin="8,0,16,0"
+                                 Text="{Binding Settings.StartupGracePeriodMinutes, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock VerticalAlignment="Center" Text="Макс. алертов/час:" />
+                        <TextBox Width="60"
+                                 Margin="8,0,0,0"
+                                 Text="{Binding Settings.MaxAlertsPerHour, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <TextBlock VerticalAlignment="Center" Text="CPU, %:" />
@@ -313,7 +346,7 @@
                                Foreground="#FF666666"
                                FontSize="12"
                                TextWrapping="Wrap"
-                               Text="Срок хранения журнала: 0 — без автоочистки, 1–365 дней." />
+                               Text="Срок хранения журнала: 0 — без автоочистки, 1–365 дней. Тишина после старта и лимит/час: 0 — выключено. Критичные события (unexpected, crash/hang, Defender, disk, failed logon) лимит не режут." />
                     <TextBlock Margin="0,12,0,0"
                                FontWeight="SemiBold"
                                Text="Watchdog процессов" />
@@ -342,7 +375,7 @@
                                Foreground="#FF666666"
                                FontSize="12"
                                TextWrapping="Wrap"
-                               Text="Плейсхолдеры: {Subject} {Host} {DisplayName} {MachineName} {Time} {Type} {Source} {EventId} {Message} {CorrelationId}" />
+                               Text="Плейсхолдеры: {Subject} {Host} {DisplayName} {MachineName} {Time} {Type} {Source} {EventId} {Message} {CorrelationId} {Uptime}" />
                     <TextBox Margin="0,8,0,0"
                              Height="72"
                              AcceptsReturn="True"

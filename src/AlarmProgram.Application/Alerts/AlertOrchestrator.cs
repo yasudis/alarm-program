@@ -27,6 +27,8 @@ public sealed class AlertOrchestrator
     private readonly Dictionary<string, DateTimeOffset> _seenEvents = new(StringComparer.Ordinal);
     private readonly object _cooldownLock = new();
     private readonly Dictionary<MachineEventType, DateTimeOffset> _lastSentByType = [];
+    private readonly DateTimeOffset _startedAt = DateTimeOffset.UtcNow;
+    private readonly List<DateTimeOffset> _sentTimestamps = [];
 
     public AlertOrchestrator(
         IEventCollector collector,
@@ -204,10 +206,18 @@ public sealed class AlertOrchestrator
             }
         }
 
-        if (!_filter.ShouldRaiseLocally(machineEvent, settings, _muteState, lastSentOfType: lastSent))
+        var now = DateTimeOffset.UtcNow;
+        if (!_filter.ShouldRaiseLocally(
+                machineEvent,
+                settings,
+                _muteState,
+                lastSentOfType: lastSent,
+                now: now,
+                monitoringStartedAt: _startedAt,
+                sentCountInLastHour: CountSentInLastHour(now)))
         {
             _logger.LogInformation(
-                "Событие {EventType} на {HostName} отфильтровано (quiet hours/settings/mute/cooldown)",
+                "Событие {EventType} на {HostName} отфильтровано (quiet hours/settings/mute/cooldown/grace/rate)",
                 machineEvent.Type,
                 machineEvent.HostName);
             return;
@@ -239,6 +249,7 @@ public sealed class AlertOrchestrator
             lock (_cooldownLock)
             {
                 _lastSentByType[machineEvent.Type] = DateTimeOffset.UtcNow;
+                RecordSent(DateTimeOffset.UtcNow);
             }
 
             return;
@@ -316,6 +327,7 @@ public sealed class AlertOrchestrator
         lock (_cooldownLock)
         {
             _lastSentByType[machineEvent.Type] = DateTimeOffset.UtcNow;
+            RecordSent(DateTimeOffset.UtcNow);
         }
     }
 
@@ -344,6 +356,27 @@ public sealed class AlertOrchestrator
         {
             _logger.LogWarning(ex, "Не удалось показать balloon в трее для {EventType}", machineEvent.Type);
         }
+    }
+
+    private int CountSentInLastHour(DateTimeOffset now)
+    {
+        lock (_cooldownLock)
+        {
+            PurgeOldSends(now);
+            return _sentTimestamps.Count;
+        }
+    }
+
+    private void RecordSent(DateTimeOffset timestamp)
+    {
+        PurgeOldSends(timestamp);
+        _sentTimestamps.Add(timestamp);
+    }
+
+    private void PurgeOldSends(DateTimeOffset now)
+    {
+        var expireBefore = now - TimeSpan.FromHours(1);
+        _sentTimestamps.RemoveAll(item => item <= expireBefore);
     }
 
     private static string Truncate(string text, int maxLength)

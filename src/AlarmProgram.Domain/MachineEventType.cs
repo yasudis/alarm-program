@@ -31,5 +31,10 @@ public enum MachineEventType
     DailyDigest = 26,
     FailedLogon = 27,
     ApplicationCrash = 28,
-    RebootPending = 29
+    RebootPending = 29,
+    ApplicationHang = 30,
+    DefenderThreat = 31,
+    WindowsUpdateFailed = 32,
+    DiskError = 33,
+    StatusSnapshot = 34
 }

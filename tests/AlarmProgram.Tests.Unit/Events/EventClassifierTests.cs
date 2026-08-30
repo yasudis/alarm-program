@@ -22,6 +22,9 @@ public class EventClassifierTests
     [InlineData(7002, MachineEventType.UserLogoff)]
     [InlineData(4625, MachineEventType.FailedLogon)]
     [InlineData(1000, MachineEventType.ApplicationCrash)]
+    [InlineData(1002, MachineEventType.ApplicationHang)]
+    [InlineData(1116, MachineEventType.DefenderThreat)]
+    [InlineData(1117, MachineEventType.DefenderThreat)]
     public void Classify_maps_known_event_ids(int eventId, MachineEventType expectedType)
     {
         var result = _classifier.Classify(CreateRaw(eventId));
@@ -93,10 +96,34 @@ public class EventClassifierTests
     {
         foreach (var eventId in WindowsEventLogReader.CandidateEventIds)
         {
-            var result = _classifier.Classify(CreateRaw(eventId, "initiated the restart of computer"));
+            var result = _classifier.Classify(CreateRaw(eventId, "initiated the restart of computer", SourceFor(eventId)));
             Assert.NotNull(result);
             Assert.NotEqual(MachineEventType.Unknown, result.Type);
         }
+    }
+
+    [Theory]
+    [InlineData(20, "Microsoft-Windows-WindowsUpdateClient", MachineEventType.WindowsUpdateFailed)]
+    [InlineData(7, "disk", MachineEventType.DiskError)]
+    [InlineData(11, "disk", MachineEventType.DiskError)]
+    [InlineData(51, "Ntfs", MachineEventType.DiskError)]
+    [InlineData(153, "stornvme", MachineEventType.DiskError)]
+    [InlineData(5001, "Microsoft-Windows-Windows Defender", MachineEventType.DefenderThreat)]
+    public void Classify_maps_source_gated_event_ids(int eventId, string source, MachineEventType expectedType)
+    {
+        var result = _classifier.Classify(CreateRaw(eventId, "failure", source));
+
+        Assert.NotNull(result);
+        Assert.Equal(expectedType, result.Type);
+    }
+
+    [Theory]
+    [InlineData(20, "Microsoft-Windows-EventLog")]
+    [InlineData(7, "Service Control Manager")]
+    [InlineData(5001, "Microsoft-Windows-EventLog")]
+    public void Classify_ignores_source_gated_ids_from_unrelated_providers(int eventId, string source)
+    {
+        Assert.Null(_classifier.Classify(CreateRaw(eventId, "unrelated", source)));
     }
 
     [Fact]
@@ -105,12 +132,20 @@ public class EventClassifierTests
         Assert.Throws<ArgumentNullException>(() => _classifier.Classify(null!));
     }
 
-    private static RawSystemEvent CreateRaw(int eventId, string? message = "sample") => new()
+    private static RawSystemEvent CreateRaw(int eventId, string? message = "sample", string source = "Microsoft-Windows-EventLog") => new()
     {
         OccurredAt = new DateTimeOffset(2026, 8, 24, 10, 30, 0, TimeSpan.Zero),
         EventId = eventId,
-        Source = "Microsoft-Windows-EventLog",
+        Source = source,
         Message = message,
         HostName = "TEST-PC"
+    };
+
+    private static string SourceFor(int eventId) => eventId switch
+    {
+        20 => "Microsoft-Windows-WindowsUpdateClient",
+        7 or 11 or 51 or 153 => "disk",
+        5001 => "Microsoft-Windows-Windows Defender",
+        _ => "Microsoft-Windows-EventLog"
     };
 }

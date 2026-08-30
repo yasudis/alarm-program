@@ -1,10 +1,18 @@
 using AlarmProgram.Application.Abstractions;
+using AlarmProgram.Application.Health;
 using AlarmProgram.Domain;
 
 namespace AlarmProgram.Application.Alerts;
 
 public sealed class AlertFormatter : IAlertFormatter
 {
+    private readonly IHostUptimeProvider? _uptimeProvider;
+
+    public AlertFormatter(IHostUptimeProvider? uptimeProvider = null)
+    {
+        _uptimeProvider = uptimeProvider;
+    }
+
     public AlertMessage Format(MachineEvent machineEvent, UserSettings? settings = null)
     {
         ArgumentNullException.ThrowIfNull(machineEvent);
@@ -21,6 +29,7 @@ public sealed class AlertFormatter : IAlertFormatter
         var eventId = machineEvent.EventId?.ToString() ?? "-";
         var correlationId = Guid.NewGuid().ToString("N");
         var originalMessage = machineEvent.Message?.Trim() ?? string.Empty;
+        var uptime = HostUptimeFormatter.Format(_uptimeProvider?.GetUptime() ?? TimeSpan.Zero);
 
         string body;
         var template = settings?.AlertBodyTemplate?.Trim();
@@ -37,7 +46,8 @@ public sealed class AlertFormatter : IAlertFormatter
                 machineEvent.Source,
                 eventId,
                 originalMessage,
-                correlationId);
+                correlationId,
+                uptime);
         }
         else
         {
@@ -47,6 +57,7 @@ public sealed class AlertFormatter : IAlertFormatter
                 $"Время: {timestamp}{Environment.NewLine}" +
                 $"Тип: {machineEvent.Type}{Environment.NewLine}" +
                 $"Источник: {machineEvent.Source} (Event ID {eventId}){Environment.NewLine}" +
+                $"Uptime: {uptime}{Environment.NewLine}" +
                 $"CorrelationId: {correlationId}";
 
             if (!string.IsNullOrWhiteSpace(originalMessage))
@@ -77,7 +88,8 @@ public sealed class AlertFormatter : IAlertFormatter
         string source,
         string eventId,
         string message,
-        string correlationId) =>
+        string correlationId,
+        string uptime) =>
         template
             .Replace("{Subject}", subject, StringComparison.OrdinalIgnoreCase)
             .Replace("{Host}", hostLabel, StringComparison.OrdinalIgnoreCase)
@@ -88,7 +100,8 @@ public sealed class AlertFormatter : IAlertFormatter
             .Replace("{Source}", source, StringComparison.OrdinalIgnoreCase)
             .Replace("{EventId}", eventId, StringComparison.OrdinalIgnoreCase)
             .Replace("{Message}", message, StringComparison.OrdinalIgnoreCase)
-            .Replace("{CorrelationId}", correlationId, StringComparison.OrdinalIgnoreCase);
+            .Replace("{CorrelationId}", correlationId, StringComparison.OrdinalIgnoreCase)
+            .Replace("{Uptime}", uptime, StringComparison.OrdinalIgnoreCase);
 
     private static string SubjectFor(MachineEventType eventType) => eventType switch
     {
@@ -121,6 +134,11 @@ public sealed class AlertFormatter : IAlertFormatter
         MachineEventType.FailedLogon => "Неудачный вход в Windows",
         MachineEventType.ApplicationCrash => "Падение приложения",
         MachineEventType.RebootPending => "Требуется перезагрузка Windows",
+        MachineEventType.ApplicationHang => "Приложение не отвечает",
+        MachineEventType.DefenderThreat => "Угроза Windows Defender",
+        MachineEventType.WindowsUpdateFailed => "Сбой обновления Windows",
+        MachineEventType.DiskError => "Ошибка диска",
+        MachineEventType.StatusSnapshot => "Статус ПК",
         _ => "Событие ПК"
     };
 }

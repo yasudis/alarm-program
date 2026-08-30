@@ -19,7 +19,8 @@ public sealed class EventClassifier : IEventClassifier
         [7001] = MachineEventType.UserLogon,
         [7002] = MachineEventType.UserLogoff,
         [4625] = MachineEventType.FailedLogon,
-        [1000] = MachineEventType.ApplicationCrash
+        [1000] = MachineEventType.ApplicationCrash,
+        [1002] = MachineEventType.ApplicationHang
     };
 
     public MachineEvent? Classify(RawSystemEvent rawEvent)
@@ -54,9 +55,59 @@ public sealed class EventClassifier : IEventClassifier
                 : MachineEventType.Shutdown;
         }
 
+        if (IsDefenderThreat(rawEvent))
+        {
+            return MachineEventType.DefenderThreat;
+        }
+
+        if (IsWindowsUpdateFailed(rawEvent))
+        {
+            return MachineEventType.WindowsUpdateFailed;
+        }
+
+        if (IsDiskError(rawEvent))
+        {
+            return MachineEventType.DiskError;
+        }
+
         return EventIdMap.TryGetValue(rawEvent.EventId, out var type)
             ? type
             : null;
+    }
+
+    private static bool IsDefenderThreat(RawSystemEvent rawEvent)
+    {
+        if (rawEvent.EventId is 1116 or 1117)
+        {
+            return true;
+        }
+
+        return rawEvent.EventId == 5001 && SourceContains(rawEvent.Source, "defender");
+    }
+
+    private static bool IsWindowsUpdateFailed(RawSystemEvent rawEvent) =>
+        rawEvent.EventId == 20 && SourceContains(rawEvent.Source, "windowsupdate");
+
+    private static bool IsDiskError(RawSystemEvent rawEvent) =>
+        rawEvent.EventId is 7 or 11 or 51 or 153
+        && SourceContains(rawEvent.Source, "disk", "ntfs", "storahci", "stornvme");
+
+    private static bool SourceContains(string? source, params string[] keywords)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            return false;
+        }
+
+        foreach (var keyword in keywords)
+        {
+            if (source.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsRestartMessage(string? message)

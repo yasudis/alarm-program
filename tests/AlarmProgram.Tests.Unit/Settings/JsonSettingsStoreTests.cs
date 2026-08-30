@@ -69,7 +69,12 @@ public class JsonSettingsStoreTests
             SmtpUseSsl = true,
             NotifyOnFailedLogon = true,
             NotifyOnApplicationCrash = false,
-            PlaySoundOnCriticalAlerts = false
+            PlaySoundOnCriticalAlerts = false,
+            NotifyOnApplicationHang = false,
+            NotifyOnDefenderThreat = true,
+            NotifyOnWindowsUpdateFailed = false,
+            StartupGracePeriodMinutes = 3,
+            MaxAlertsPerHour = 12
         };
 
         await store.SaveAsync(original);
@@ -114,6 +119,11 @@ public class JsonSettingsStoreTests
         Assert.True(restored.NotifyOnFailedLogon);
         Assert.False(restored.NotifyOnApplicationCrash);
         Assert.False(restored.PlaySoundOnCriticalAlerts);
+        Assert.False(restored.NotifyOnApplicationHang);
+        Assert.True(restored.NotifyOnDefenderThreat);
+        Assert.False(restored.NotifyOnWindowsUpdateFailed);
+        Assert.Equal(3, restored.StartupGracePeriodMinutes);
+        Assert.Equal(12, restored.MaxAlertsPerHour);
     }
 
     [Fact]

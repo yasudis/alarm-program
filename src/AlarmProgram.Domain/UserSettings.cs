@@ -111,6 +111,20 @@ public sealed class UserSettings
 
     public bool NotifyOnRebootPending { get; set; } = true;
 
+    public bool NotifyOnApplicationHang { get; set; } = true;
+
+    public bool NotifyOnDefenderThreat { get; set; } = true;
+
+    public bool NotifyOnWindowsUpdateFailed { get; set; } = true;
+
+    public bool NotifyOnDiskError { get; set; } = true;
+
+    public bool NotifyOnStatusSnapshot { get; set; } = true;
+
+    public int StartupGracePeriodMinutes { get; set; }
+
+    public int MaxAlertsPerHour { get; set; }
+
     public bool PlaySoundOnCriticalAlerts { get; set; } = true;
 
     public bool ShowTrayBalloonOnCriticalAlerts { get; set; } = true;
@@ -174,6 +188,11 @@ public sealed class UserSettings
         MachineEventType.FailedLogon => NotifyOnFailedLogon,
         MachineEventType.ApplicationCrash => NotifyOnApplicationCrash,
         MachineEventType.RebootPending => NotifyOnRebootPending,
+        MachineEventType.ApplicationHang => NotifyOnApplicationHang,
+        MachineEventType.DefenderThreat => NotifyOnDefenderThreat,
+        MachineEventType.WindowsUpdateFailed => NotifyOnWindowsUpdateFailed,
+        MachineEventType.DiskError => NotifyOnDiskError,
+        MachineEventType.StatusSnapshot => NotifyOnStatusSnapshot,
         _ => false
     };
 
@@ -477,6 +496,16 @@ public sealed class UserSettings
         if (HighMemoryThresholdPercent is < 50 or > 99)
         {
             errors.Add("Порог памяти должен быть от 50 до 99%.");
+        }
+
+        if (StartupGracePeriodMinutes is < 0 or > 60)
+        {
+            errors.Add("Период тишины после старта должен быть от 0 до 60 минут.");
+        }
+
+        if (MaxAlertsPerHour is < 0 or > 200)
+        {
+            errors.Add("Лимит алертов в час должен быть от 0 до 200 (0 — без лимита).");
         }
 
         return errors;

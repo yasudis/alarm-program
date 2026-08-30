@@ -3,6 +3,7 @@ using System.Reflection;
 using AlarmProgram.Application.Abstractions;
 using AlarmProgram.Application.Alerts;
 using AlarmProgram.Application.Configuration;
+using AlarmProgram.Application.Health;
 using AlarmProgram.Domain;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -20,6 +21,9 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly IAlertJournal _alertJournal;
     private readonly AlertOrchestrator _orchestrator;
     private readonly IDiagnosticsService _diagnosticsService;
+    private readonly INetworkMonitor _networkMonitor;
+    private readonly IPendingRebootMonitor _pendingRebootMonitor;
+    private readonly IHostUptimeProvider _uptimeProvider;
     private readonly ILogger<MainViewModel> _logger;
 
     public MainViewModel(
@@ -31,6 +35,9 @@ public sealed partial class MainViewModel : ObservableObject
         IAlertJournal alertJournal,
         AlertOrchestrator orchestrator,
         IDiagnosticsService diagnosticsService,
+        INetworkMonitor networkMonitor,
+        IPendingRebootMonitor pendingRebootMonitor,
+        IHostUptimeProvider uptimeProvider,
         ILogger<MainViewModel> logger)
     {
         _appOptions = appOptions.Value;
@@ -41,6 +48,9 @@ public sealed partial class MainViewModel : ObservableObject
         _alertJournal = alertJournal;
         _orchestrator = orchestrator;
         _diagnosticsService = diagnosticsService;
+        _networkMonitor = networkMonitor;
+        _pendingRebootMonitor = pendingRebootMonitor;
+        _uptimeProvider = uptimeProvider;
         _logger = logger;
 
         ApplicationVersion = ResolveVersion();
@@ -258,6 +268,47 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private async Task SendStatusSnapshotAsync()
+    {
+        try
+        {
+            var snapshot = StatusSnapshotBuilder.Build(CollectStatusFacts());
+            await _orchestrator.ProcessMachineEventAsync(snapshot);
+            await RefreshJournalAsync(CancellationToken.None);
+            StatusMessage = snapshot.Message ?? "Статус отправлен.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Не удалось отправить снимок статуса");
+            StatusMessage = "Не удалось отправить статус ПК.";
+        }
+    }
+
+    [RelayCommand]
+    private async Task CopyDiagnosticsAsync()
+    {
+        try
+        {
+            var settings = await _settingsStore.LoadAsync();
+            var recent = await _alertJournal.GetRecentAsync(8);
+            var report = DiagnosticsReportBuilder.Build(
+                ApplicationVersion,
+                CollectStatusFacts(),
+                settings,
+                recent,
+                _diagnosticsService.LogsDirectory);
+
+            System.Windows.Clipboard.SetText(report);
+            StatusMessage = "Диагностика скопирована в буфер обмена.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Не удалось скопировать диагностику");
+            StatusMessage = "Не удалось скопировать диагностику.";
+        }
+    }
+
     private bool CanPause() => !_monitoringController.IsPaused;
 
     private bool CanResume() => _monitoringController.IsPaused;
@@ -317,6 +368,16 @@ public sealed partial class MainViewModel : ObservableObject
             _logger.LogWarning(ex, "Не удалось обновить журнал алертов");
         }
     }
+
+    private HostStatusFacts CollectStatusFacts() => new(
+        _uptimeProvider.GetUptime(),
+        _networkMonitor.CurrentPrimaryIp,
+        _networkMonitor.IsNetworkAvailable,
+        StatusSnapshotBuilder.DescribeSystemDrive(),
+        _pendingRebootMonitor.IsRebootPending(),
+        _muteState.IsMuted,
+        _muteState.MutedUntil,
+        _monitoringController.IsPaused);
 
     private static string ResolveVersion()
     {

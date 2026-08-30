@@ -21,14 +21,24 @@ public sealed class WindowsEventLogReader : IEventCollector
         7001,
         7002,
         4625,
-        1000
+        1000,
+        1002,
+        1116,
+        1117,
+        5001,
+        20,
+        7,
+        11,
+        51,
+        153
     ];
 
     private static readonly (string LogName, int[] EventIds)[] LogQueries =
     [
-        ("System", [12, 13, 41, 1074, 1076, 6005, 6006, 6008, 6009, 7001, 7002]),
+        ("System", [12, 13, 41, 1074, 1076, 6005, 6006, 6008, 6009, 7001, 7002, 7, 11, 51, 153, 20]),
         ("Security", [4625]),
-        ("Application", [1000])
+        ("Application", [1000, 1002]),
+        ("Microsoft-Windows-Windows Defender/Operational", [1116, 1117, 5001])
     ];
 
     private const int MaxEvents = 500;
