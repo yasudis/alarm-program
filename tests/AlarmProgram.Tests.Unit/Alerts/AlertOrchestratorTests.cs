@@ -253,6 +253,9 @@ public class AlertOrchestratorTests
 
         public Task ClearAsync(CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+
+        public Task<int> PurgeOlderThanAsync(TimeSpan maxAge, CancellationToken cancellationToken = default) =>
+            Task.FromResult(0);
     }
 
     private sealed class FakeAlertOutbox : IAlertOutbox

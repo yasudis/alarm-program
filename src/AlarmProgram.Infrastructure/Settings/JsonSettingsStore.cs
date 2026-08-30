@@ -141,7 +141,14 @@ public sealed class JsonSettingsStore : ISettingsStore
         HighCpuThresholdPercent = dto.HighCpuThresholdPercent <= 0 ? 90 : dto.HighCpuThresholdPercent,
         HighMemoryThresholdPercent = dto.HighMemoryThresholdPercent <= 0 ? 90 : dto.HighMemoryThresholdPercent,
         NotifyOnRdpConnected = dto.NotifyOnRdpConnected,
-        NotifyOnRdpDisconnected = dto.NotifyOnRdpDisconnected
+        NotifyOnRdpDisconnected = dto.NotifyOnRdpDisconnected,
+        NotifyOnServiceDown = dto.NotifyOnServiceDown,
+        WatchedServiceNames = dto.WatchedServiceNames ?? string.Empty,
+        NotifyOnUsbConnected = dto.NotifyOnUsbConnected,
+        NotifyOnUsbDisconnected = dto.NotifyOnUsbDisconnected,
+        DailyDigestEnabled = dto.DailyDigestEnabled,
+        DailyDigestTime = ParseTime(dto.DailyDigestTime, TimeSpan.FromHours(9)),
+        JournalRetentionDays = dto.JournalRetentionDays < 0 ? 0 : dto.JournalRetentionDays
     };
 
     private SettingsFileDto MapToDto(UserSettings settings, bool encryptSecrets) => new()
@@ -198,7 +205,14 @@ public sealed class JsonSettingsStore : ISettingsStore
         HighCpuThresholdPercent = settings.HighCpuThresholdPercent,
         HighMemoryThresholdPercent = settings.HighMemoryThresholdPercent,
         NotifyOnRdpConnected = settings.NotifyOnRdpConnected,
-        NotifyOnRdpDisconnected = settings.NotifyOnRdpDisconnected
+        NotifyOnRdpDisconnected = settings.NotifyOnRdpDisconnected,
+        NotifyOnServiceDown = settings.NotifyOnServiceDown,
+        WatchedServiceNames = settings.WatchedServiceNames ?? string.Empty,
+        NotifyOnUsbConnected = settings.NotifyOnUsbConnected,
+        NotifyOnUsbDisconnected = settings.NotifyOnUsbDisconnected,
+        DailyDigestEnabled = settings.DailyDigestEnabled,
+        DailyDigestTime = FormatTime(settings.DailyDigestTime),
+        JournalRetentionDays = settings.JournalRetentionDays
     };
 
     private static async Task WriteDtoAsync(

@@ -24,5 +24,9 @@ public enum MachineEventType
     HighCpu = 19,
     HighMemory = 20,
     RdpConnected = 21,
-    RdpDisconnected = 22
+    RdpDisconnected = 22,
+    ServiceDown = 23,
+    UsbConnected = 24,
+    UsbDisconnected = 25,
+    DailyDigest = 26
 }

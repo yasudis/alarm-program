@@ -74,4 +74,27 @@ public class SystemHealthRulesTests
         Assert.Equal(MachineEventType.RdpConnected, SystemHealthRules.RdpConnected().Type);
         Assert.Equal(MachineEventType.RdpDisconnected, SystemHealthRules.RdpDisconnected().Type);
     }
+
+    [Fact]
+    public void ServiceDown_returns_alert_only_when_service_is_not_running()
+    {
+        var down = SystemHealthRules.ServiceDown("Spooler", isRunning: false);
+        Assert.NotNull(down);
+        Assert.Equal(MachineEventType.ServiceDown, down.Type);
+        Assert.Contains("Spooler", down.Message);
+        Assert.Null(SystemHealthRules.ServiceDown("Spooler", isRunning: true));
+        Assert.Null(SystemHealthRules.ServiceDown(" ", isRunning: false));
+    }
+
+    [Fact]
+    public void Usb_helpers_create_connect_and_disconnect_events()
+    {
+        var connected = SystemHealthRules.UsbConnected("E:", "KINGSTON");
+        var disconnected = SystemHealthRules.UsbDisconnected("E:", "KINGSTON");
+
+        Assert.Equal(MachineEventType.UsbConnected, connected!.Type);
+        Assert.Equal(MachineEventType.UsbDisconnected, disconnected!.Type);
+        Assert.Contains("KINGSTON", connected.Message);
+        Assert.Null(SystemHealthRules.UsbConnected(" "));
+    }
 }

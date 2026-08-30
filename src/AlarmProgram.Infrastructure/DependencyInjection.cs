@@ -13,8 +13,10 @@ using AlarmProgram.Infrastructure.Power;
 using AlarmProgram.Infrastructure.ProcessWatch;
 using AlarmProgram.Infrastructure.Resources;
 using AlarmProgram.Infrastructure.Security;
+using AlarmProgram.Infrastructure.ServiceWatch;
 using AlarmProgram.Infrastructure.Session;
 using AlarmProgram.Infrastructure.Settings;
+using AlarmProgram.Infrastructure.Usb;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AlarmProgram.Infrastructure;
@@ -38,6 +40,8 @@ public static class DependencyInjection
         services.AddSingleton<ISessionMonitor, WindowsSessionMonitor>();
         services.AddSingleton<IDiskSpaceMonitor, SystemDiskSpaceMonitor>();
         services.AddSingleton<IProcessWatchdog, SystemProcessWatchdog>();
+        services.AddSingleton<IServiceWatchdog, SystemServiceWatchdog>();
+        services.AddSingleton<IUsbDeviceMonitor, RemovableDriveUsbMonitor>();
         services.AddSingleton<IResourceMonitor, WindowsResourceMonitor>();
         services.AddSingleton<IEventCollector, WindowsEventLogReader>();
         services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromSeconds(30) });

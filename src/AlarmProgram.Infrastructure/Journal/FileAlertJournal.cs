@@ -129,6 +129,38 @@ public sealed class FileAlertJournal : IAlertJournal
         }
     }
 
+    public async Task<int> PurgeOlderThanAsync(TimeSpan maxAge, CancellationToken cancellationToken = default)
+    {
+        if (maxAge <= TimeSpan.Zero)
+        {
+            return 0;
+        }
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var cutoff = DateTimeOffset.UtcNow - maxAge;
+            var entries = await ReadAllAsync(cancellationToken);
+            var kept = entries.Where(entry => entry.Timestamp >= cutoff).ToList();
+            var removed = entries.Count - kept.Count;
+            if (removed == 0)
+            {
+                return 0;
+            }
+
+            await WriteAllAsync(kept, cancellationToken);
+            _logger.LogInformation(
+                "Автоочистка журнала: удалено {Removed} записей старше {Cutoff:O}",
+                removed,
+                cutoff);
+            return removed;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     private async Task WriteAllAsync(List<AlertJournalEntry> entries, CancellationToken cancellationToken)
     {
         var directory = Path.GetDirectoryName(_filePath);

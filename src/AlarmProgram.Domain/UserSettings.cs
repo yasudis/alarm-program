@@ -72,6 +72,20 @@ public sealed class UserSettings
 
     public bool NotifyOnRdpDisconnected { get; set; }
 
+    public bool NotifyOnServiceDown { get; set; }
+
+    public string WatchedServiceNames { get; set; } = string.Empty;
+
+    public bool NotifyOnUsbConnected { get; set; }
+
+    public bool NotifyOnUsbDisconnected { get; set; }
+
+    public bool DailyDigestEnabled { get; set; }
+
+    public TimeSpan DailyDigestTime { get; set; } = TimeSpan.FromHours(9);
+
+    public int JournalRetentionDays { get; set; }
+
     public int LowDiskSpaceThresholdPercent { get; set; } = 10;
 
     public int BatteryLowThresholdPercent { get; set; } = 15;
@@ -124,12 +138,18 @@ public sealed class UserSettings
         MachineEventType.HighMemory => NotifyOnHighMemory,
         MachineEventType.RdpConnected => NotifyOnRdpConnected,
         MachineEventType.RdpDisconnected => NotifyOnRdpDisconnected,
+        MachineEventType.ServiceDown => NotifyOnServiceDown,
+        MachineEventType.UsbConnected => NotifyOnUsbConnected,
+        MachineEventType.UsbDisconnected => NotifyOnUsbDisconnected,
+        MachineEventType.DailyDigest => DailyDigestEnabled,
         _ => false
     };
 
     public IReadOnlyList<string> GetTelegramChatIds() => ParseTelegramChatIds(TelegramChatId);
 
     public IReadOnlyList<string> GetWatchedProcessNames() => ParseWatchedProcessNames(WatchedProcessNames);
+
+    public IReadOnlyList<string> GetWatchedServiceNames() => ParseWatchedServiceNames(WatchedServiceNames);
 
     public static IReadOnlyList<string> ParseTelegramChatIds(string? raw)
     {
@@ -159,6 +179,21 @@ public sealed class UserSettings
             .ToArray();
     }
 
+    public static IReadOnlyList<string> ParseWatchedServiceNames(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return [];
+        }
+
+        return raw
+            .Split([',', ';', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(NormalizeServiceName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     public static string NormalizeProcessName(string? name)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -173,6 +208,16 @@ public sealed class UserSettings
         }
 
         return trimmed;
+    }
+
+    public static string NormalizeServiceName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return string.Empty;
+        }
+
+        return name.Trim().Trim('"');
     }
 
     public bool IsWithinQuietHours(DateTimeOffset timestamp)
@@ -264,9 +309,37 @@ public sealed class UserSettings
             }
         }
 
+        if (NotifyOnServiceDown)
+        {
+            var serviceNames = GetWatchedServiceNames();
+            if (serviceNames.Count == 0)
+            {
+                errors.Add("Укажите хотя бы одно имя службы для watchdog.");
+            }
+            else if (serviceNames.Count > 10)
+            {
+                errors.Add("Можно указать не более 10 служб.");
+            }
+            else if (serviceNames.Any(name => name.Length > 128 || name.Contains('\\') || name.Contains('/') || name.Contains(':')))
+            {
+                errors.Add("Некорректное имя службы. Укажите Service Name, например Spooler или wuauserv.");
+            }
+        }
+
         if (HeartbeatEnabled && (HeartbeatIntervalMinutes < 5 || HeartbeatIntervalMinutes > 1440))
         {
             errors.Add("Интервал heartbeat должен быть от 5 до 1440 минут.");
+        }
+
+        if (DailyDigestEnabled
+            && (DailyDigestTime < TimeSpan.Zero || DailyDigestTime >= TimeSpan.FromDays(1)))
+        {
+            errors.Add("Некорректное время ежедневного дайджеста.");
+        }
+
+        if (JournalRetentionDays is < 0 or > 365)
+        {
+            errors.Add("Срок хранения журнала должен быть от 0 до 365 дней (0 — без автоочистки).");
         }
 
         if (QuietHoursEnabled)

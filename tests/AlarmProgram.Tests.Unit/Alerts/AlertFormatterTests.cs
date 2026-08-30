@@ -31,6 +31,10 @@ public class AlertFormatterTests
     [InlineData(MachineEventType.HighMemory, "Высокое использование памяти")]
     [InlineData(MachineEventType.RdpConnected, "RDP-подключение")]
     [InlineData(MachineEventType.RdpDisconnected, "RDP-отключение")]
+    [InlineData(MachineEventType.ServiceDown, "Служба не запущена")]
+    [InlineData(MachineEventType.UsbConnected, "USB/съёмный диск подключён")]
+    [InlineData(MachineEventType.UsbDisconnected, "USB/съёмный диск отключён")]
+    [InlineData(MachineEventType.DailyDigest, "Ежедневный дайджест алертов")]
     public void Format_uses_stable_subject_and_includes_host_and_timestamp(
         MachineEventType eventType,
         string expectedSubject)

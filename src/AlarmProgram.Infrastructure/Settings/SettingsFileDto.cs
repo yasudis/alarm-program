@@ -87,4 +87,18 @@ internal sealed class SettingsFileDto
     public bool NotifyOnRdpConnected { get; set; }
 
     public bool NotifyOnRdpDisconnected { get; set; }
+
+    public bool NotifyOnServiceDown { get; set; }
+
+    public string WatchedServiceNames { get; set; } = string.Empty;
+
+    public bool NotifyOnUsbConnected { get; set; }
+
+    public bool NotifyOnUsbDisconnected { get; set; }
+
+    public bool DailyDigestEnabled { get; set; }
+
+    public string DailyDigestTime { get; set; } = "09:00";
+
+    public int JournalRetentionDays { get; set; }
 }

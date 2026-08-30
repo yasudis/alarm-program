@@ -25,7 +25,7 @@
 - **Запускать вместе с Windows** — автозапуск после перезагрузки.
 - **Сворачивать в системный трей** — приложение остается в фоне.
 - Включите нужные типы событий: Startup / Shutdown / Restart / Unexpected / User logon.
-- По желанию: Heartbeat, тихие часы, HTTPS webhook, watchdog процессов, CPU/RAM, RDP.
+- По желанию: Heartbeat, тихие часы, HTTPS webhook, watchdog процессов/служб, CPU/RAM, RDP, USB, ежедневный дайджест.
 
 ## 4. Проверка после reboot
 

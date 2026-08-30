@@ -114,6 +114,10 @@ public sealed class AlertFormatter : IAlertFormatter
         MachineEventType.HighMemory => "Высокое использование памяти",
         MachineEventType.RdpConnected => "RDP-подключение",
         MachineEventType.RdpDisconnected => "RDP-отключение",
+        MachineEventType.ServiceDown => "Служба не запущена",
+        MachineEventType.UsbConnected => "USB/съёмный диск подключён",
+        MachineEventType.UsbDisconnected => "USB/съёмный диск отключён",
+        MachineEventType.DailyDigest => "Ежедневный дайджест алертов",
         _ => "Событие ПК"
     };
 }
