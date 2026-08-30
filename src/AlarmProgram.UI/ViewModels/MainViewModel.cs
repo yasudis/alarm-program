@@ -81,6 +81,11 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _snoozeUntilTime = "08:00";
 
+    [ObservableProperty]
+    private string _journalFilter = string.Empty;
+
+    private IReadOnlyList<AlertJournalEntry> _journalEntries = [];
+
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         await Settings.InitializeAsync(cancellationToken);
@@ -356,16 +361,25 @@ public sealed partial class MainViewModel : ObservableObject
     {
         try
         {
-            var entries = await _alertJournal.GetRecentAsync(20, cancellationToken);
-            RecentAlerts.Clear();
-            foreach (var entry in entries)
-            {
-                RecentAlerts.Add(entry);
-            }
+            var entries = await _alertJournal.GetRecentAsync(50, cancellationToken);
+            _journalEntries = entries;
+            ApplyJournalFilter();
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Не удалось обновить журнал алертов");
+        }
+    }
+
+    partial void OnJournalFilterChanged(string value) => ApplyJournalFilter();
+
+    private void ApplyJournalFilter()
+    {
+        var filtered = JournalSearch.Apply(_journalEntries, JournalFilter);
+        RecentAlerts.Clear();
+        foreach (var entry in filtered)
+        {
+            RecentAlerts.Add(entry);
         }
     }
 

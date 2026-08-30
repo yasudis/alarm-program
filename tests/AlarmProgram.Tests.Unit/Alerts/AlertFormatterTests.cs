@@ -44,6 +44,14 @@ public class AlertFormatterTests
     [InlineData(MachineEventType.WindowsUpdateFailed, "Сбой обновления Windows")]
     [InlineData(MachineEventType.DiskError, "Ошибка диска")]
     [InlineData(MachineEventType.StatusSnapshot, "Статус ПК")]
+    [InlineData(MachineEventType.Bsod, "BSOD / аварийная перезагрузка")]
+    [InlineData(MachineEventType.UserAccountCreated, "Создана учётная запись Windows")]
+    [InlineData(MachineEventType.AdminGroupChanged, "Изменение группы Администраторы")]
+    [InlineData(MachineEventType.FirewallDisabled, "Отключён брандмауэр Windows")]
+    [InlineData(MachineEventType.HostUnreachable, "Хост недоступен")]
+    [InlineData(MachineEventType.HostRestored, "Хост снова доступен")]
+    [InlineData(MachineEventType.CustomEvent, "Пользовательское событие журнала")]
+    [InlineData(MachineEventType.WeeklyDigest, "Еженедельный дайджест алертов")]
     public void Format_uses_stable_subject_and_includes_host_and_timestamp(
         MachineEventType eventType,
         string expectedSubject)

@@ -287,7 +287,15 @@ public class UserSettingsTests
             NotifyOnDefenderThreat = false,
             NotifyOnWindowsUpdateFailed = true,
             NotifyOnDiskError = true,
-            NotifyOnStatusSnapshot = false
+            NotifyOnStatusSnapshot = false,
+            NotifyOnBsod = true,
+            NotifyOnUserAccountCreated = false,
+            NotifyOnAdminGroupChanged = true,
+            NotifyOnFirewallDisabled = true,
+            NotifyOnHostUnreachable = true,
+            NotifyOnHostRestored = false,
+            NotifyOnCustomEvent = true,
+            WeeklyDigestEnabled = true
         };
 
         Assert.True(settings.IsEventEnabled(MachineEventType.ServiceDown));
@@ -302,6 +310,14 @@ public class UserSettingsTests
         Assert.True(settings.IsEventEnabled(MachineEventType.WindowsUpdateFailed));
         Assert.True(settings.IsEventEnabled(MachineEventType.DiskError));
         Assert.False(settings.IsEventEnabled(MachineEventType.StatusSnapshot));
+        Assert.True(settings.IsEventEnabled(MachineEventType.Bsod));
+        Assert.False(settings.IsEventEnabled(MachineEventType.UserAccountCreated));
+        Assert.True(settings.IsEventEnabled(MachineEventType.AdminGroupChanged));
+        Assert.True(settings.IsEventEnabled(MachineEventType.FirewallDisabled));
+        Assert.True(settings.IsEventEnabled(MachineEventType.HostUnreachable));
+        Assert.False(settings.IsEventEnabled(MachineEventType.HostRestored));
+        Assert.True(settings.IsEventEnabled(MachineEventType.CustomEvent));
+        Assert.True(settings.IsEventEnabled(MachineEventType.WeeklyDigest));
     }
 
     [Fact]
@@ -375,5 +391,33 @@ public class UserSettingsTests
 
         Assert.False(settings.IsValid);
         Assert.Contains(settings.Validate(), error => error.Contains("журнала", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ParseWatchedHosts_and_custom_event_ids()
+    {
+        var hosts = UserSettings.ParseWatchedHosts("8.8.8.8, nas.local, 8.8.8.8");
+        var ids = UserSettings.ParseCustomEventIds("7045, 7040, 7045, 0, abc");
+
+        Assert.Equal(new[] { "8.8.8.8", "nas.local" }, hosts);
+        Assert.Equal(new[] { 7045, 7040 }, ids);
+    }
+
+    [Fact]
+    public void Validate_requires_hosts_when_ping_watchdog_enabled()
+    {
+        var settings = new UserSettings { NotifyOnHostUnreachable = true };
+
+        Assert.False(settings.IsValid);
+        Assert.Contains(settings.Validate(), error => error.Contains("хост", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Validate_requires_custom_event_ids_when_enabled()
+    {
+        var settings = new UserSettings { NotifyOnCustomEvent = true };
+
+        Assert.False(settings.IsValid);
+        Assert.Contains(settings.Validate(), error => error.Contains("Event ID", StringComparison.OrdinalIgnoreCase));
     }
 }

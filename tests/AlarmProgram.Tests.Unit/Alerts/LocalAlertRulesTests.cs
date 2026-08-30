@@ -12,6 +12,9 @@ public class LocalAlertRulesTests
     [InlineData(MachineEventType.ApplicationHang, true)]
     [InlineData(MachineEventType.DefenderThreat, true)]
     [InlineData(MachineEventType.DiskError, true)]
+    [InlineData(MachineEventType.Bsod, true)]
+    [InlineData(MachineEventType.FirewallDisabled, true)]
+    [InlineData(MachineEventType.HostUnreachable, true)]
     [InlineData(MachineEventType.FailedLogon, false)]
     [InlineData(MachineEventType.Startup, false)]
     public void ShouldPlaySound_covers_critical_watchdog_events(MachineEventType type, bool expected)
@@ -25,6 +28,8 @@ public class LocalAlertRulesTests
     [InlineData(MachineEventType.ApplicationCrash, true)]
     [InlineData(MachineEventType.RebootPending, true)]
     [InlineData(MachineEventType.WindowsUpdateFailed, true)]
+    [InlineData(MachineEventType.UserAccountCreated, true)]
+    [InlineData(MachineEventType.AdminGroupChanged, true)]
     [InlineData(MachineEventType.Heartbeat, false)]
     public void ShouldShowBalloon_covers_critical_and_security_events(MachineEventType type, bool expected)
     {
@@ -50,6 +55,17 @@ public class LocalAlertRulesTests
         Assert.False(filter.ShouldNotify(
             CreateEvent(MachineEventType.UnexpectedShutdown),
             settings));
+    }
+
+    [Fact]
+    public void IsCritical_covers_security_and_bsod()
+    {
+        Assert.True(LocalAlertRules.IsCritical(MachineEventType.Bsod));
+        Assert.True(LocalAlertRules.IsCritical(MachineEventType.AdminGroupChanged));
+        Assert.True(LocalAlertRules.IsCritical(MachineEventType.HostUnreachable));
+        Assert.False(LocalAlertRules.IsCritical(MachineEventType.Heartbeat));
+        Assert.True(LocalAlertRules.BypassesAntiSpam(MachineEventType.Bsod));
+        Assert.True(LocalAlertRules.BypassesAntiSpam(MachineEventType.UserAccountCreated));
     }
 
     private static MachineEvent CreateEvent(MachineEventType type) => new()

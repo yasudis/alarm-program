@@ -20,7 +20,8 @@ public sealed class EventClassifier : IEventClassifier
         [7002] = MachineEventType.UserLogoff,
         [4625] = MachineEventType.FailedLogon,
         [1000] = MachineEventType.ApplicationCrash,
-        [1002] = MachineEventType.ApplicationHang
+        [1002] = MachineEventType.ApplicationHang,
+        [4720] = MachineEventType.UserAccountCreated
     };
 
     public MachineEvent? Classify(RawSystemEvent rawEvent)
@@ -70,10 +71,45 @@ public sealed class EventClassifier : IEventClassifier
             return MachineEventType.DiskError;
         }
 
+        if (IsBsod(rawEvent))
+        {
+            return MachineEventType.Bsod;
+        }
+
+        if (IsAdminGroupChanged(rawEvent))
+        {
+            return MachineEventType.AdminGroupChanged;
+        }
+
         return EventIdMap.TryGetValue(rawEvent.EventId, out var type)
             ? type
             : null;
     }
+
+    private static bool IsBsod(RawSystemEvent rawEvent)
+    {
+        if (rawEvent.EventId != 1001)
+        {
+            return false;
+        }
+
+        if (SourceContains(rawEvent.Source, "bugcheck", "wer-systemerrorreporting"))
+        {
+            return true;
+        }
+
+        return !string.IsNullOrWhiteSpace(rawEvent.Message)
+               && ContainsAny(rawEvent.Message, "bugcheck", "синий экран", "stop code");
+    }
+
+    private static bool IsAdminGroupChanged(RawSystemEvent rawEvent) =>
+        rawEvent.EventId is 4732 or 4728
+        && !string.IsNullOrWhiteSpace(rawEvent.Message)
+        && ContainsAny(
+            rawEvent.Message,
+            "administrators",
+            "администратор",
+            "s-1-5-32-544");
 
     private static bool IsDefenderThreat(RawSystemEvent rawEvent)
     {

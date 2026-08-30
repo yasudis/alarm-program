@@ -139,6 +139,14 @@ public sealed class AlertFormatter : IAlertFormatter
         MachineEventType.WindowsUpdateFailed => "Сбой обновления Windows",
         MachineEventType.DiskError => "Ошибка диска",
         MachineEventType.StatusSnapshot => "Статус ПК",
+        MachineEventType.Bsod => "BSOD / аварийная перезагрузка",
+        MachineEventType.UserAccountCreated => "Создана учётная запись Windows",
+        MachineEventType.AdminGroupChanged => "Изменение группы Администраторы",
+        MachineEventType.FirewallDisabled => "Отключён брандмауэр Windows",
+        MachineEventType.HostUnreachable => "Хост недоступен",
+        MachineEventType.HostRestored => "Хост снова доступен",
+        MachineEventType.CustomEvent => "Пользовательское событие журнала",
+        MachineEventType.WeeklyDigest => "Еженедельный дайджест алертов",
         _ => "Событие ПК"
     };
 }

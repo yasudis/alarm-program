@@ -25,6 +25,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
     private readonly IUsbDeviceMonitor _usbDeviceMonitor;
     private readonly IResourceMonitor _resourceMonitor;
     private readonly IPendingRebootMonitor _pendingRebootMonitor;
+    private readonly IFirewallMonitor _firewallMonitor;
+    private readonly IHostPingWatchdog _hostPingWatchdog;
     private readonly IHostUptimeProvider _uptimeProvider;
     private readonly IAlertMuteState _muteState;
     private readonly IWindowsEventLogWriter _windowsEventLogWriter;
@@ -35,6 +37,7 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
     private bool _isRunning;
     private DateTimeOffset? _lastHeartbeatAt;
     private DateOnly? _lastDailyDigestLocalDate;
+    private DateOnly? _lastWeeklyDigestLocalDate;
 
     public MonitoringHostedService(
         AlertOrchestrator orchestrator,
@@ -51,6 +54,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         IUsbDeviceMonitor usbDeviceMonitor,
         IResourceMonitor resourceMonitor,
         IPendingRebootMonitor pendingRebootMonitor,
+        IFirewallMonitor firewallMonitor,
+        IHostPingWatchdog hostPingWatchdog,
         IHostUptimeProvider uptimeProvider,
         IAlertMuteState muteState,
         IWindowsEventLogWriter windowsEventLogWriter,
@@ -71,6 +76,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _usbDeviceMonitor = usbDeviceMonitor;
         _resourceMonitor = resourceMonitor;
         _pendingRebootMonitor = pendingRebootMonitor;
+        _firewallMonitor = firewallMonitor;
+        _hostPingWatchdog = hostPingWatchdog;
         _uptimeProvider = uptimeProvider;
         _muteState = muteState;
         _windowsEventLogWriter = windowsEventLogWriter;
@@ -171,6 +178,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _usbDeviceMonitor.UsbEventDetected += OnExternalEventDetected;
         _resourceMonitor.ResourceEventDetected += OnExternalEventDetected;
         _pendingRebootMonitor.RebootEventDetected += OnExternalEventDetected;
+        _firewallMonitor.FirewallEventDetected += OnExternalEventDetected;
+        _hostPingWatchdog.HostEventDetected += OnExternalEventDetected;
         _networkMonitor.Start();
         _powerEventMonitor.Start();
         _sessionMonitor.Start();
@@ -180,6 +189,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _usbDeviceMonitor.Start();
         _resourceMonitor.Start();
         _pendingRebootMonitor.Start();
+        _firewallMonitor.Start();
+        _hostPingWatchdog.Start();
 
         SetRunning(true);
         await TryRecoverPreviousShutdownAsync(startupAt, stoppingToken);
@@ -198,6 +209,7 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
                     since = DateTimeOffset.UtcNow - pollInterval;
                     await TrySendHeartbeatAsync(stoppingToken);
                     await TrySendDailyDigestAsync(stoppingToken);
+                    await TrySendWeeklyDigestAsync(stoppingToken);
                     var settings = await _settingsStore.LoadAsync(stoppingToken);
                     _diskSpaceMonitor.Poll(settings);
                     _processWatchdog.Poll(settings);
@@ -205,6 +217,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
                     _usbDeviceMonitor.Poll(settings);
                     _resourceMonitor.Poll(settings);
                     _pendingRebootMonitor.Poll(settings);
+                    _firewallMonitor.Poll(settings);
+                    _hostPingWatchdog.Poll(settings);
                     _powerEventMonitor.Poll(settings);
                     await TryPurgeJournalAsync(settings, stoppingToken);
                     await _orchestrator.FlushOutboxAsync(stoppingToken);
@@ -239,6 +253,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _usbDeviceMonitor.UsbEventDetected -= OnExternalEventDetected;
         _resourceMonitor.ResourceEventDetected -= OnExternalEventDetected;
         _pendingRebootMonitor.RebootEventDetected -= OnExternalEventDetected;
+        _firewallMonitor.FirewallEventDetected -= OnExternalEventDetected;
+        _hostPingWatchdog.HostEventDetected -= OnExternalEventDetected;
         SetRunning(false);
         _logger.LogInformation("Фоновый мониторинг событий остановлен");
     }
@@ -254,6 +270,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _usbDeviceMonitor.Dispose();
         _resourceMonitor.Dispose();
         _pendingRebootMonitor.Dispose();
+        _firewallMonitor.Dispose();
+        _hostPingWatchdog.Dispose();
         base.Dispose();
     }
 
@@ -367,6 +385,36 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         var digest = DailyDigestBuilder.Build(recent, now);
         await _orchestrator.ProcessMachineEventAsync(digest, settings, cancellationToken);
         _lastDailyDigestLocalDate = DateOnly.FromDateTime(now.ToLocalTime().DateTime);
+    }
+
+    private async Task TrySendWeeklyDigestAsync(CancellationToken cancellationToken)
+    {
+        var settings = await _settingsStore.LoadAsync(cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+        if (!WeeklyDigestBuilder.ShouldSend(
+                settings.WeeklyDigestEnabled,
+                settings.WeeklyDigestDay,
+                settings.WeeklyDigestTime,
+                now,
+                _lastWeeklyDigestLocalDate))
+        {
+            return;
+        }
+
+        if (!settings.IsValid || !settings.HasEnabledChannel)
+        {
+            return;
+        }
+
+        if (settings.IsWithinQuietHours(now))
+        {
+            return;
+        }
+
+        var recent = await _alertJournal.GetRecentAsync(500, cancellationToken);
+        var digest = WeeklyDigestBuilder.Build(recent, now);
+        await _orchestrator.ProcessMachineEventAsync(digest, settings, cancellationToken);
+        _lastWeeklyDigestLocalDate = DateOnly.FromDateTime(now.ToLocalTime().DateTime);
     }
 
     private async Task TryPurgeJournalAsync(UserSettings settings, CancellationToken cancellationToken)

@@ -106,4 +106,26 @@ public class SystemHealthRulesTests
         Assert.Equal(MachineEventType.RebootPending, alert.Type);
         Assert.Null(SystemHealthRules.RebootPending(false));
     }
+
+    [Fact]
+    public void FirewallDisabled_returns_alert_only_when_disabled()
+    {
+        var alert = SystemHealthRules.FirewallDisabled(true);
+        Assert.NotNull(alert);
+        Assert.Equal(MachineEventType.FirewallDisabled, alert.Type);
+        Assert.Null(SystemHealthRules.FirewallDisabled(false));
+    }
+
+    [Fact]
+    public void Host_ping_helpers_create_unreachable_and_restored_events()
+    {
+        var down = SystemHealthRules.HostUnreachable("8.8.8.8", isReachable: false);
+        var up = SystemHealthRules.HostRestored("8.8.8.8", becameReachable: true);
+
+        Assert.Equal(MachineEventType.HostUnreachable, down!.Type);
+        Assert.Contains("8.8.8.8", down.Message);
+        Assert.Equal(MachineEventType.HostRestored, up!.Type);
+        Assert.Null(SystemHealthRules.HostUnreachable("8.8.8.8", isReachable: true));
+        Assert.Null(SystemHealthRules.HostRestored("8.8.8.8", becameReachable: false));
+    }
 }

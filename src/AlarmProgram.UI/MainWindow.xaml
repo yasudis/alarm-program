@@ -253,6 +253,27 @@
                         <CheckBox Margin="0,0,16,8"
                                   Content="Status snapshot"
                                   IsChecked="{Binding Settings.NotifyOnStatusSnapshot}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="BSOD / bugcheck"
+                                  IsChecked="{Binding Settings.NotifyOnBsod}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="User account created"
+                                  IsChecked="{Binding Settings.NotifyOnUserAccountCreated}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Admin group changed"
+                                  IsChecked="{Binding Settings.NotifyOnAdminGroupChanged}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Firewall disabled"
+                                  IsChecked="{Binding Settings.NotifyOnFirewallDisabled}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Host unreachable"
+                                  IsChecked="{Binding Settings.NotifyOnHostUnreachable}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Host restored"
+                                  IsChecked="{Binding Settings.NotifyOnHostRestored}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Custom Event IDs"
+                                  IsChecked="{Binding Settings.NotifyOnCustomEvent}" />
                     </WrapPanel>
 
                     <TextBlock Margin="0,8,0,0"
@@ -288,6 +309,22 @@
                                  Margin="8,0,0,0"
                                  Text="{Binding Settings.DailyDigestTime, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
+                    <CheckBox Margin="0,12,0,0"
+                              Content="Еженедельный дайджест"
+                              IsChecked="{Binding Settings.WeeklyDigestEnabled}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock VerticalAlignment="Center" Text="День:" />
+                        <TextBox Width="90"
+                                 Margin="8,0,16,0"
+                                 Text="{Binding Settings.WeeklyDigestDay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock VerticalAlignment="Center" Text="Время:" />
+                        <TextBox Width="70"
+                                 Margin="8,0,0,0"
+                                 Text="{Binding Settings.WeeklyDigestTime, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                    <CheckBox Margin="0,12,0,0"
+                              Content="Только критичные алерты (остальные типы подавляются)"
+                              IsChecked="{Binding Settings.CriticalAlertsOnly}" />
 
                     <CheckBox Margin="0,12,0,0"
                               Content="Тихие часы (кроме unexpected shutdown)"
@@ -346,7 +383,7 @@
                                Foreground="#FF666666"
                                FontSize="12"
                                TextWrapping="Wrap"
-                               Text="Срок хранения журнала: 0 — без автоочистки, 1–365 дней. Тишина после старта и лимит/час: 0 — выключено. Критичные события (unexpected, crash/hang, Defender, disk, failed logon) лимит не режут." />
+                               Text="Срок хранения журнала: 0 — без автоочистки, 1–365 дней. Тишина после старта и лимит/час: 0 — выключено. Режим «только критичные» пропускает unexpected/BSOD/crash/hang/Defender/disk/failed logon/firewall/admin. Пользовательский снимок статуса проходит всегда." />
                     <TextBlock Margin="0,12,0,0"
                                FontWeight="SemiBold"
                                Text="Watchdog процессов" />
@@ -367,6 +404,26 @@
                                Text="Service Name через запятую: Spooler, wuauserv, MSSQLSERVER" />
                     <TextBox Margin="0,8,0,0"
                              Text="{Binding Settings.WatchedServiceNames, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Margin="0,12,0,0"
+                               FontWeight="SemiBold"
+                               Text="Ping watchdog хостов" />
+                    <TextBlock Margin="0,4,0,0"
+                               Foreground="#FF666666"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Text="Имена или IP через запятую: 8.8.8.8, nas.local, gateway" />
+                    <TextBox Margin="0,8,0,0"
+                             Text="{Binding Settings.WatchedHosts, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Margin="0,12,0,0"
+                               FontWeight="SemiBold"
+                               Text="Пользовательские Event ID" />
+                    <TextBlock Margin="0,4,0,0"
+                               Foreground="#FF666666"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Text="Дополнительно следить за Event ID из System/Application/Security, например 7045, 7040" />
+                    <TextBox Margin="0,8,0,0"
+                             Text="{Binding Settings.CustomEventIds, UpdateSourceTrigger=PropertyChanged}" />
 
                     <TextBlock Margin="0,12,0,0"
                                FontWeight="SemiBold"
@@ -461,6 +518,17 @@
                                VerticalAlignment="Center"
                                Text="Журнал последних алертов" />
                 </DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                    <DockPanel>
+                        <TextBlock VerticalAlignment="Center"
+                                   Margin="0,0,8,0"
+                                   Text="Фильтр:" />
+                        <TextBox Height="28"
+                                 VerticalContentAlignment="Center"
+                                 Text="{Binding JournalFilter, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="Фильтр журнала по типу, статусу, каналу или теме" />
+                    </DockPanel>
+                </StackPanel>
                 <ListView ItemsSource="{Binding RecentAlerts}">
                     <ListView.View>
                         <GridView>

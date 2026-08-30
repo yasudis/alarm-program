@@ -36,5 +36,13 @@ public enum MachineEventType
     DefenderThreat = 31,
     WindowsUpdateFailed = 32,
     DiskError = 33,
-    StatusSnapshot = 34
+    StatusSnapshot = 34,
+    Bsod = 35,
+    UserAccountCreated = 36,
+    AdminGroupChanged = 37,
+    FirewallDisabled = 38,
+    HostUnreachable = 39,
+    HostRestored = 40,
+    CustomEvent = 41,
+    WeeklyDigest = 42
 }
