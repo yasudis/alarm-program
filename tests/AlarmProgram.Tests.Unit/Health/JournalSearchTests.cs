@@ -40,13 +40,83 @@ public class JournalSearchTests
         Assert.Equal(MachineEventType.Bsod, bySubject[0].EventType);
     }
 
-    private static AlertJournalEntry Entry(MachineEventType type, string subject, string channel = "Telegram") => new()
+    [Fact]
+    public void Apply_uses_and_logic_for_multiple_terms()
     {
-        Timestamp = DateTimeOffset.UtcNow,
+        var entries = new[]
+        {
+            Entry(MachineEventType.Startup, "ПК включился", "Telegram", status: "Sent"),
+            Entry(MachineEventType.Startup, "ПК включился", "Discord", status: "Queued"),
+            Entry(MachineEventType.Bsod, "Синий экран", "Telegram", status: "Sent")
+        };
+
+        var result = JournalSearch.Apply(entries, "startup telegram sent");
+
+        Assert.Single(result);
+        Assert.Equal(MachineEventType.Startup, result[0].EventType);
+        Assert.Equal("Telegram", result[0].Channel);
+    }
+
+    [Fact]
+    public void Apply_supports_field_prefixes_and_negation()
+    {
+        var entries = new[]
+        {
+            Entry(MachineEventType.Bsod, "Critical", "Telegram", host: "PC-1"),
+            Entry(MachineEventType.Bsod, "Critical", "Discord", host: "PC-2")
+        };
+
+        var result = JournalSearch.Apply(entries, "type:bsod !channel:discord host:pc-1");
+
+        Assert.Single(result);
+        Assert.Equal("PC-1", result[0].HostName);
+    }
+
+    [Fact]
+    public void Apply_supports_correlation_id_and_date_filters()
+    {
+        var current = Entry(
+            MachineEventType.Startup,
+            "on",
+            correlationId: "abc-123",
+            timestamp: Local(new DateTime(2026, 9, 1, 11, 0, 0)));
+        var older = Entry(
+            MachineEventType.Startup,
+            "old",
+            correlationId: "xyz-777",
+            timestamp: Local(new DateTime(2026, 9, 2, 11, 0, 0)));
+        var entries = new[] { current, older };
+
+        var byCorrelation = JournalSearch.Apply(entries, "cid:abc-123");
+        var byDate = JournalSearch.Apply(entries, "date:2026-09-01");
+
+        Assert.Single(byCorrelation);
+        Assert.Equal("abc-123", byCorrelation[0].CorrelationId);
+        Assert.Single(byDate);
+        Assert.Equal("abc-123", byDate[0].CorrelationId);
+    }
+
+    private static AlertJournalEntry Entry(
+        MachineEventType type,
+        string subject,
+        string channel = "Telegram",
+        string status = "Sent",
+        string host = "TEST-PC",
+        string correlationId = "cid-1",
+        DateTimeOffset? timestamp = null) => new()
+    {
+        Timestamp = timestamp ?? DateTimeOffset.UtcNow,
         EventType = type,
         Subject = subject,
-        Status = "Sent",
+        Status = status,
         Channel = channel,
-        HostName = "TEST-PC"
+        HostName = host,
+        CorrelationId = correlationId
     };
+
+    private static DateTimeOffset Local(DateTime unspecifiedLocal)
+    {
+        var offset = TimeZoneInfo.Local.GetUtcOffset(unspecifiedLocal);
+        return new DateTimeOffset(unspecifiedLocal, offset);
+    }
 }

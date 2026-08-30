@@ -404,6 +404,14 @@ public class UserSettingsTests
     }
 
     [Fact]
+    public void ParseCustomEventIds_supports_ranges()
+    {
+        var ids = UserSettings.ParseCustomEventIds("4720-4722, 5001, 4721");
+
+        Assert.Equal(new[] { 4720, 4721, 4722, 5001 }, ids);
+    }
+
+    [Fact]
     public void Validate_requires_hosts_when_ping_watchdog_enabled()
     {
         var settings = new UserSettings { NotifyOnHostUnreachable = true };
@@ -419,5 +427,18 @@ public class UserSettingsTests
 
         Assert.False(settings.IsValid);
         Assert.Contains(settings.Validate(), error => error.Contains("Event ID", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Validate_rejects_invalid_custom_event_range()
+    {
+        var settings = new UserSettings
+        {
+            NotifyOnCustomEvent = true,
+            CustomEventIds = "1002-1000"
+        };
+
+        Assert.False(settings.IsValid);
+        Assert.Contains(settings.Validate(), error => error.Contains("диапазоны", StringComparison.OrdinalIgnoreCase));
     }
 }

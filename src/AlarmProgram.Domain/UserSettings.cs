@@ -303,13 +303,19 @@ public sealed class UserSettings
         }
 
         var ids = new List<int>();
-        foreach (var token in raw.Split(
-                     [',', ';', '\n', '\r', ' ', '\t'],
-                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (var token in ParseCustomEventTokens(raw))
         {
-            if (int.TryParse(token, out var id) && id is >= 1 and <= 65535 && !ids.Contains(id))
+            if (!TryParseCustomEventToken(token, out var start, out var end))
             {
-                ids.Add(id);
+                continue;
+            }
+
+            for (var id = start; id <= end; id++)
+            {
+                if (!ids.Contains(id))
+                {
+                    ids.Add(id);
+                }
             }
         }
 
@@ -620,11 +626,17 @@ public sealed class UserSettings
             {
                 errors.Add("Можно указать не более 20 пользовательских Event ID.");
             }
+
+            if (!string.IsNullOrWhiteSpace(CustomEventIds)
+                && ParseCustomEventTokens(CustomEventIds).Any(token => !TryParseCustomEventToken(token, out _, out _)))
+            {
+                errors.Add("Некорректный пользовательский Event ID. Используйте числа 1..65535 или диапазоны вида 1000-1010.");
+            }
         }
         else if (!string.IsNullOrWhiteSpace(CustomEventIds)
-                 && ParseCustomEventTokens(CustomEventIds).Any(token => !int.TryParse(token, out var id) || id is < 1 or > 65535))
+                 && ParseCustomEventTokens(CustomEventIds).Any(token => !TryParseCustomEventToken(token, out _, out _)))
         {
-            errors.Add("Некорректный пользовательский Event ID. Укажите числа от 1 до 65535 через запятую.");
+            errors.Add("Некорректный пользовательский Event ID. Укажите числа 1..65535 или диапазоны вида 1000-1010.");
         }
 
         if (WeeklyDigestEnabled
@@ -638,6 +650,40 @@ public sealed class UserSettings
 
     private static IEnumerable<string> ParseCustomEventTokens(string raw) =>
         raw.Split([',', ';', '\n', '\r', ' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private static bool TryParseCustomEventToken(string token, out int start, out int end)
+    {
+        start = 0;
+        end = 0;
+        var normalized = token.Trim();
+        if (int.TryParse(normalized, out var id))
+        {
+            if (id is < 1 or > 65535)
+            {
+                return false;
+            }
+
+            start = id;
+            end = id;
+            return true;
+        }
+
+        var dashIndex = normalized.IndexOf('-');
+        if (dashIndex <= 0 || dashIndex >= normalized.Length - 1 || normalized.LastIndexOf('-') != dashIndex)
+        {
+            return false;
+        }
+
+        if (!int.TryParse(normalized[..dashIndex], out start)
+            || !int.TryParse(normalized[(dashIndex + 1)..], out end))
+        {
+            return false;
+        }
+
+        return start is >= 1 and <= 65535
+               && end is >= 1 and <= 65535
+               && start <= end;
+    }
 
     private static bool IsValidDiscordWebhook(string url)
     {

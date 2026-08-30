@@ -30,14 +30,16 @@ public class DailyDigestBuilderTests
                 Timestamp = now.AddHours(-1),
                 EventType = MachineEventType.Startup,
                 Subject = "on",
-                Status = "Sent"
+                Status = "Sent",
+                Channel = "Telegram"
             },
             new AlertJournalEntry
             {
                 Timestamp = now.AddHours(-2),
                 EventType = MachineEventType.Startup,
                 Subject = "on2",
-                Status = "Sent"
+                Status = "Queued",
+                Channel = "Discord"
             },
             new AlertJournalEntry
             {
@@ -60,6 +62,12 @@ public class DailyDigestBuilderTests
         Assert.Equal(MachineEventType.DailyDigest, digest.Type);
         Assert.Contains("алертов: 2", digest.Message);
         Assert.Contains("Startup: 2", digest.Message);
+        Assert.Contains("По каналам:", digest.Message);
+        Assert.Contains("Telegram: 1", digest.Message);
+        Assert.Contains("Discord: 1", digest.Message);
+        Assert.Contains("По статусам доставки:", digest.Message);
+        Assert.Contains("Sent: 1", digest.Message);
+        Assert.Contains("Queued: 1", digest.Message);
         Assert.DoesNotContain("Heartbeat", digest.Message);
         Assert.DoesNotContain("Shutdown", digest.Message);
     }

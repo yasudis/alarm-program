@@ -40,6 +40,37 @@ public static class DailyDigestBuilder
             builder.AppendLine($"- {group.Key}: {group.Count()}");
         }
 
+        var byChannel = recent
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.Channel))
+            .GroupBy(entry => entry.Channel!, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .Take(5)
+            .ToArray();
+        if (byChannel.Length > 0)
+        {
+            builder.AppendLine("По каналам:");
+            foreach (var group in byChannel)
+            {
+                builder.AppendLine($"- {group.Key}: {group.Count()}");
+            }
+        }
+
+        var byStatus = recent
+            .GroupBy(entry => string.IsNullOrWhiteSpace(entry.Status) ? "Unknown" : entry.Status, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .Take(6)
+            .ToArray();
+        if (byStatus.Length > 0)
+        {
+            builder.AppendLine("По статусам доставки:");
+            foreach (var group in byStatus)
+            {
+                builder.AppendLine($"- {group.Key}: {group.Count()}");
+            }
+        }
+
         return SystemHealthRules.DailyDigest(recent.Length, builder.ToString().TrimEnd());
     }
 

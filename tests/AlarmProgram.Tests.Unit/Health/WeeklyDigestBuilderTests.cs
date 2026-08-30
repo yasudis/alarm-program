@@ -30,14 +30,16 @@ public class WeeklyDigestBuilderTests
                 Timestamp = now.AddDays(-1),
                 EventType = MachineEventType.Bsod,
                 Subject = "bsod",
-                Status = "Sent"
+                Status = "Sent",
+                Channel = "Telegram"
             },
             new AlertJournalEntry
             {
                 Timestamp = now.AddDays(-2),
                 EventType = MachineEventType.Bsod,
                 Subject = "bsod2",
-                Status = "Sent"
+                Status = "Queued",
+                Channel = "Discord"
             },
             new AlertJournalEntry
             {
@@ -60,6 +62,12 @@ public class WeeklyDigestBuilderTests
         Assert.Equal(MachineEventType.WeeklyDigest, digest.Type);
         Assert.Contains("алертов: 2", digest.Message);
         Assert.Contains("Bsod: 2", digest.Message);
+        Assert.Contains("По каналам:", digest.Message);
+        Assert.Contains("Telegram: 1", digest.Message);
+        Assert.Contains("Discord: 1", digest.Message);
+        Assert.Contains("По статусам доставки:", digest.Message);
+        Assert.Contains("Sent: 1", digest.Message);
+        Assert.Contains("Queued: 1", digest.Message);
         Assert.DoesNotContain("Heartbeat", digest.Message);
         Assert.DoesNotContain("Startup", digest.Message);
     }

@@ -41,4 +41,24 @@ public class CustomEventRulesTests
 
         Assert.Null(CustomEventRules.TryClassify(raw, settings));
     }
+
+    [Fact]
+    public void TryClassify_maps_event_id_from_configured_range()
+    {
+        var settings = new UserSettings { CustomEventIds = "4700-4705" };
+        var raw = new RawSystemEvent
+        {
+            OccurredAt = DateTimeOffset.UtcNow,
+            EventId = 4703,
+            Source = "System",
+            Message = "custom range",
+            HostName = "TEST-PC"
+        };
+
+        var result = CustomEventRules.TryClassify(raw, settings);
+
+        Assert.NotNull(result);
+        Assert.Equal(MachineEventType.CustomEvent, result.Type);
+        Assert.Equal(4703, result.EventId);
+    }
 }
