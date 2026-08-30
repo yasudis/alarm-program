@@ -52,7 +52,13 @@ public class JsonSettingsStoreTests
             WatchedProcessNames = "nginx",
             NotifyOnHighMemory = true,
             HighMemoryThresholdPercent = 80,
-            NotifyOnRdpDisconnected = true
+            NotifyOnRdpDisconnected = true,
+            NotifyOnServiceDown = true,
+            WatchedServiceNames = "Spooler",
+            NotifyOnUsbConnected = true,
+            DailyDigestEnabled = true,
+            DailyDigestTime = TimeSpan.FromHours(8),
+            JournalRetentionDays = 14
         };
 
         await store.SaveAsync(original);
@@ -80,6 +86,12 @@ public class JsonSettingsStoreTests
         Assert.True(restored.NotifyOnHighMemory);
         Assert.Equal(80, restored.HighMemoryThresholdPercent);
         Assert.True(restored.NotifyOnRdpDisconnected);
+        Assert.True(restored.NotifyOnServiceDown);
+        Assert.Equal("Spooler", restored.WatchedServiceNames);
+        Assert.True(restored.NotifyOnUsbConnected);
+        Assert.True(restored.DailyDigestEnabled);
+        Assert.Equal(TimeSpan.FromHours(8), restored.DailyDigestTime);
+        Assert.Equal(14, restored.JournalRetentionDays);
     }
 
     [Fact]

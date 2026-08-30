@@ -87,6 +87,35 @@ public class FileAlertJournalTests
         Assert.Empty(recent);
     }
 
+    [Fact]
+    public async Task PurgeOlderThanAsync_removes_only_old_entries()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "AlarmProgramTests", Guid.NewGuid().ToString("N"), "journal.json");
+        var journal = CreateJournal(path);
+
+        await journal.AppendAsync(new AlertJournalEntry
+        {
+            Timestamp = DateTimeOffset.UtcNow.AddDays(-10),
+            EventType = MachineEventType.Shutdown,
+            Subject = "old",
+            Status = "Sent"
+        });
+        await journal.AppendAsync(new AlertJournalEntry
+        {
+            Timestamp = DateTimeOffset.UtcNow.AddHours(-1),
+            EventType = MachineEventType.Startup,
+            Subject = "fresh",
+            Status = "Sent"
+        });
+
+        var removed = await journal.PurgeOlderThanAsync(TimeSpan.FromDays(7));
+        var recent = await journal.GetRecentAsync(10);
+
+        Assert.Equal(1, removed);
+        Assert.Single(recent);
+        Assert.Equal("fresh", recent[0].Subject);
+    }
+
     private static FileAlertJournal CreateJournal(string path) =>
         new(
             Options.Create(new AlertJournalOptions { FilePath = path, MaxEntries = 20 }),

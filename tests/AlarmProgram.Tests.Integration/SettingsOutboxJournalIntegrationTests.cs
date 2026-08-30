@@ -37,7 +37,13 @@ public class SettingsOutboxJournalIntegrationTests
             WatchedProcessNames = "nginx, notepad.exe",
             NotifyOnHighCpu = true,
             HighCpuThresholdPercent = 85,
-            NotifyOnRdpConnected = true
+            NotifyOnRdpConnected = true,
+            NotifyOnServiceDown = true,
+            WatchedServiceNames = "Spooler",
+            NotifyOnUsbDisconnected = true,
+            DailyDigestEnabled = true,
+            DailyDigestTime = TimeSpan.FromHours(9),
+            JournalRetentionDays = 30
         };
 
         await store.SaveAsync(original);
@@ -62,6 +68,12 @@ public class SettingsOutboxJournalIntegrationTests
         Assert.True(restored.NotifyOnHighCpu);
         Assert.Equal(85, restored.HighCpuThresholdPercent);
         Assert.True(restored.NotifyOnRdpConnected);
+        Assert.True(restored.NotifyOnServiceDown);
+        Assert.Equal("Spooler", restored.WatchedServiceNames);
+        Assert.True(restored.NotifyOnUsbDisconnected);
+        Assert.True(restored.DailyDigestEnabled);
+        Assert.Equal(TimeSpan.FromHours(9), restored.DailyDigestTime);
+        Assert.Equal(30, restored.JournalRetentionDays);
         Assert.Contains("123456789:AAExampleTelegramBotTokenValue123456", await File.ReadAllTextAsync(exportPath));
     }
 

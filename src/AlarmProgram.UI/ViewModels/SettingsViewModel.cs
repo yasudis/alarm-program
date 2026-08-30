@@ -126,6 +126,27 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _notifyOnRdpDisconnected;
 
     [ObservableProperty]
+    private bool _notifyOnServiceDown;
+
+    [ObservableProperty]
+    private string _watchedServiceNames = string.Empty;
+
+    [ObservableProperty]
+    private bool _notifyOnUsbConnected;
+
+    [ObservableProperty]
+    private bool _notifyOnUsbDisconnected;
+
+    [ObservableProperty]
+    private bool _dailyDigestEnabled;
+
+    [ObservableProperty]
+    private string _dailyDigestTime = "09:00";
+
+    [ObservableProperty]
+    private int _journalRetentionDays;
+
+    [ObservableProperty]
     private int _lowDiskSpaceThresholdPercent = 10;
 
     [ObservableProperty]
@@ -467,6 +488,13 @@ public sealed partial class SettingsViewModel : ObservableObject
         HighMemoryThresholdPercent = HighMemoryThresholdPercent,
         NotifyOnRdpConnected = NotifyOnRdpConnected,
         NotifyOnRdpDisconnected = NotifyOnRdpDisconnected,
+        NotifyOnServiceDown = NotifyOnServiceDown,
+        WatchedServiceNames = WatchedServiceNames.Trim(),
+        NotifyOnUsbConnected = NotifyOnUsbConnected,
+        NotifyOnUsbDisconnected = NotifyOnUsbDisconnected,
+        DailyDigestEnabled = DailyDigestEnabled,
+        DailyDigestTime = ParseTimeOrDefault(DailyDigestTime, TimeSpan.FromHours(9)),
+        JournalRetentionDays = JournalRetentionDays,
         LowDiskSpaceThresholdPercent = LowDiskSpaceThresholdPercent,
         BatteryLowThresholdPercent = BatteryLowThresholdPercent,
         AlertCooldownMinutes = AlertCooldownMinutes,
@@ -514,6 +542,13 @@ public sealed partial class SettingsViewModel : ObservableObject
         HighMemoryThresholdPercent = settings.HighMemoryThresholdPercent;
         NotifyOnRdpConnected = settings.NotifyOnRdpConnected;
         NotifyOnRdpDisconnected = settings.NotifyOnRdpDisconnected;
+        NotifyOnServiceDown = settings.NotifyOnServiceDown;
+        WatchedServiceNames = settings.WatchedServiceNames ?? string.Empty;
+        NotifyOnUsbConnected = settings.NotifyOnUsbConnected;
+        NotifyOnUsbDisconnected = settings.NotifyOnUsbDisconnected;
+        DailyDigestEnabled = settings.DailyDigestEnabled;
+        DailyDigestTime = FormatTime(settings.DailyDigestTime);
+        JournalRetentionDays = settings.JournalRetentionDays;
         LowDiskSpaceThresholdPercent = settings.LowDiskSpaceThresholdPercent;
         BatteryLowThresholdPercent = settings.BatteryLowThresholdPercent;
         AlertCooldownMinutes = settings.AlertCooldownMinutes;

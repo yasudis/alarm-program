@@ -270,4 +270,47 @@ public class UserSettingsTests
         Assert.True(settings.IsEventEnabled(MachineEventType.RdpConnected));
         Assert.False(settings.IsEventEnabled(MachineEventType.RdpDisconnected));
     }
+
+    [Fact]
+    public void IsEventEnabled_covers_service_usb_and_digest()
+    {
+        var settings = new UserSettings
+        {
+            NotifyOnServiceDown = true,
+            NotifyOnUsbConnected = true,
+            NotifyOnUsbDisconnected = false,
+            DailyDigestEnabled = true
+        };
+
+        Assert.True(settings.IsEventEnabled(MachineEventType.ServiceDown));
+        Assert.True(settings.IsEventEnabled(MachineEventType.UsbConnected));
+        Assert.False(settings.IsEventEnabled(MachineEventType.UsbDisconnected));
+        Assert.True(settings.IsEventEnabled(MachineEventType.DailyDigest));
+    }
+
+    [Fact]
+    public void Validate_requires_service_names_when_service_watchdog_enabled()
+    {
+        var settings = new UserSettings { NotifyOnServiceDown = true };
+
+        Assert.False(settings.IsValid);
+        Assert.Contains(settings.Validate(), error => error.Contains("службы", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ParseWatchedServiceNames_trims_and_dedupes()
+    {
+        var names = UserSettings.ParseWatchedServiceNames("Spooler, wuauserv, Spooler");
+
+        Assert.Equal(new[] { "Spooler", "wuauserv" }, names);
+    }
+
+    [Fact]
+    public void Validate_rejects_invalid_journal_retention()
+    {
+        var settings = new UserSettings { JournalRetentionDays = 400 };
+
+        Assert.False(settings.IsValid);
+        Assert.Contains(settings.Validate(), error => error.Contains("журнала", StringComparison.OrdinalIgnoreCase));
+    }
 }

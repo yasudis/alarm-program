@@ -15,6 +15,9 @@ public class MachineEventTests
     [InlineData(MachineEventType.LowDiskSpace)]
     [InlineData(MachineEventType.ProcessDown)]
     [InlineData(MachineEventType.RdpConnected)]
+    [InlineData(MachineEventType.ServiceDown)]
+    [InlineData(MachineEventType.UsbConnected)]
+    [InlineData(MachineEventType.DailyDigest)]
     public void MachineEvent_supports_core_event_types(MachineEventType eventType)
     {
         var machineEvent = new MachineEvent

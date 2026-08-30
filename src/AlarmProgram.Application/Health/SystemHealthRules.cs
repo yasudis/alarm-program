@@ -103,6 +103,56 @@ public static class SystemHealthRules
             $"Использование памяти {percent}%. Порог {thresholdPercent}%.");
     }
 
+    public static MachineEvent? ServiceDown(string serviceName, bool isRunning)
+    {
+        if (string.IsNullOrWhiteSpace(serviceName) || isRunning)
+        {
+            return null;
+        }
+
+        return Create(
+            MachineEventType.ServiceDown,
+            "ServiceWatchdog",
+            $"Служба {serviceName} не запущена.");
+    }
+
+    public static MachineEvent? UsbConnected(string deviceKey, string? label = null)
+    {
+        if (string.IsNullOrWhiteSpace(deviceKey))
+        {
+            return null;
+        }
+
+        var display = string.IsNullOrWhiteSpace(label) ? deviceKey : $"{deviceKey} ({label})";
+        return Create(
+            MachineEventType.UsbConnected,
+            "UsbMonitor",
+            $"Подключено съёмное устройство: {display}.");
+    }
+
+    public static MachineEvent? UsbDisconnected(string deviceKey, string? label = null)
+    {
+        if (string.IsNullOrWhiteSpace(deviceKey))
+        {
+            return null;
+        }
+
+        var display = string.IsNullOrWhiteSpace(label) ? deviceKey : $"{deviceKey} ({label})";
+        return Create(
+            MachineEventType.UsbDisconnected,
+            "UsbMonitor",
+            $"Отключено съёмное устройство: {display}.");
+    }
+
+    public static MachineEvent DailyDigest(int alertCount, string summary)
+    {
+        var message = string.IsNullOrWhiteSpace(summary)
+            ? $"За последние 24 часа алертов: {alertCount}."
+            : summary;
+
+        return Create(MachineEventType.DailyDigest, "DailyDigest", message);
+    }
+
     private static MachineEvent Create(MachineEventType type, string source, string message) => new()
     {
         Type = type,

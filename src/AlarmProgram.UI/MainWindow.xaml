@@ -176,6 +176,15 @@
                         <CheckBox Margin="0,0,16,8"
                                   Content="RDP disconnected"
                                   IsChecked="{Binding Settings.NotifyOnRdpDisconnected}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="Service down"
+                                  IsChecked="{Binding Settings.NotifyOnServiceDown}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="USB connected"
+                                  IsChecked="{Binding Settings.NotifyOnUsbConnected}" />
+                        <CheckBox Margin="0,0,16,8"
+                                  Content="USB disconnected"
+                                  IsChecked="{Binding Settings.NotifyOnUsbDisconnected}" />
                     </WrapPanel>
 
                     <TextBlock Margin="0,8,0,0"
@@ -195,6 +204,15 @@
                         <TextBox Width="80"
                                  Margin="8,0,0,0"
                                  Text="{Binding Settings.HeartbeatIntervalMinutes, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                    <CheckBox Margin="0,12,0,0"
+                              Content="Ежедневный дайджест алертов"
+                              IsChecked="{Binding Settings.DailyDigestEnabled}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock VerticalAlignment="Center" Text="Время дайджеста:" />
+                        <TextBox Width="70"
+                                 Margin="8,0,0,0"
+                                 Text="{Binding Settings.DailyDigestTime, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
 
                     <CheckBox Margin="0,12,0,0"
@@ -235,9 +253,18 @@
                                  Text="{Binding Settings.HighCpuThresholdPercent, UpdateSourceTrigger=PropertyChanged}" />
                         <TextBlock VerticalAlignment="Center" Text="Память, %:" />
                         <TextBox Width="60"
-                                 Margin="8,0,0,0"
+                                 Margin="8,0,16,0"
                                  Text="{Binding Settings.HighMemoryThresholdPercent, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock VerticalAlignment="Center" Text="Журнал, дней:" />
+                        <TextBox Width="60"
+                                 Margin="8,0,0,0"
+                                 Text="{Binding Settings.JournalRetentionDays, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
+                    <TextBlock Margin="0,4,0,0"
+                               Foreground="#FF666666"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Text="Срок хранения журнала: 0 — без автоочистки, 1–365 дней." />
                     <TextBlock Margin="0,12,0,0"
                                FontWeight="SemiBold"
                                Text="Watchdog процессов" />
@@ -248,6 +275,16 @@
                                Text="Имена через запятую, без пути: nginx, notepad, mysqld" />
                     <TextBox Margin="0,8,0,0"
                              Text="{Binding Settings.WatchedProcessNames, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Margin="0,12,0,0"
+                               FontWeight="SemiBold"
+                               Text="Watchdog служб Windows" />
+                    <TextBlock Margin="0,4,0,0"
+                               Foreground="#FF666666"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Text="Service Name через запятую: Spooler, wuauserv, MSSQLSERVER" />
+                    <TextBox Margin="0,8,0,0"
+                             Text="{Binding Settings.WatchedServiceNames, UpdateSourceTrigger=PropertyChanged}" />
 
                     <TextBlock Margin="0,12,0,0"
                                FontWeight="SemiBold"
@@ -321,6 +358,11 @@
                                 Margin="8,0,0,0"
                                 Content="Экспорт CSV"
                                 Command="{Binding ExportJournalCommand}" />
+                        <Button Width="160"
+                                Height="28"
+                                Margin="8,0,0,0"
+                                Content="Повторить outbox"
+                                Command="{Binding RetryOutboxCommand}" />
                         <Button Width="140"
                                 Height="28"
                                 Margin="8,0,0,0"

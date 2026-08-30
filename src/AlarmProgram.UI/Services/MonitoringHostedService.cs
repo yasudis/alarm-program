@@ -1,6 +1,7 @@
 using AlarmProgram.Application.Abstractions;
 using AlarmProgram.Application.Alerts;
 using AlarmProgram.Application.Configuration;
+using AlarmProgram.Application.Health;
 using AlarmProgram.Domain;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -14,11 +15,14 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
     private readonly IEventCollector _collector;
     private readonly IEventClassifier _classifier;
     private readonly ISettingsStore _settingsStore;
+    private readonly IAlertJournal _alertJournal;
     private readonly INetworkMonitor _networkMonitor;
     private readonly IPowerEventMonitor _powerEventMonitor;
     private readonly ISessionMonitor _sessionMonitor;
     private readonly IDiskSpaceMonitor _diskSpaceMonitor;
     private readonly IProcessWatchdog _processWatchdog;
+    private readonly IServiceWatchdog _serviceWatchdog;
+    private readonly IUsbDeviceMonitor _usbDeviceMonitor;
     private readonly IResourceMonitor _resourceMonitor;
     private readonly IAlertMuteState _muteState;
     private readonly IWindowsEventLogWriter _windowsEventLogWriter;
@@ -28,17 +32,21 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
     private bool _isPaused;
     private bool _isRunning;
     private DateTimeOffset? _lastHeartbeatAt;
+    private DateOnly? _lastDailyDigestLocalDate;
 
     public MonitoringHostedService(
         AlertOrchestrator orchestrator,
         IEventCollector collector,
         IEventClassifier classifier,
         ISettingsStore settingsStore,
+        IAlertJournal alertJournal,
         INetworkMonitor networkMonitor,
         IPowerEventMonitor powerEventMonitor,
         ISessionMonitor sessionMonitor,
         IDiskSpaceMonitor diskSpaceMonitor,
         IProcessWatchdog processWatchdog,
+        IServiceWatchdog serviceWatchdog,
+        IUsbDeviceMonitor usbDeviceMonitor,
         IResourceMonitor resourceMonitor,
         IAlertMuteState muteState,
         IWindowsEventLogWriter windowsEventLogWriter,
@@ -49,11 +57,14 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _collector = collector;
         _classifier = classifier;
         _settingsStore = settingsStore;
+        _alertJournal = alertJournal;
         _networkMonitor = networkMonitor;
         _powerEventMonitor = powerEventMonitor;
         _sessionMonitor = sessionMonitor;
         _diskSpaceMonitor = diskSpaceMonitor;
         _processWatchdog = processWatchdog;
+        _serviceWatchdog = serviceWatchdog;
+        _usbDeviceMonitor = usbDeviceMonitor;
         _resourceMonitor = resourceMonitor;
         _muteState = muteState;
         _windowsEventLogWriter = windowsEventLogWriter;
@@ -150,12 +161,16 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _sessionMonitor.SessionEventDetected += OnExternalEventDetected;
         _diskSpaceMonitor.DiskEventDetected += OnExternalEventDetected;
         _processWatchdog.ProcessEventDetected += OnExternalEventDetected;
+        _serviceWatchdog.ServiceEventDetected += OnExternalEventDetected;
+        _usbDeviceMonitor.UsbEventDetected += OnExternalEventDetected;
         _resourceMonitor.ResourceEventDetected += OnExternalEventDetected;
         _networkMonitor.Start();
         _powerEventMonitor.Start();
         _sessionMonitor.Start();
         _diskSpaceMonitor.Start();
         _processWatchdog.Start();
+        _serviceWatchdog.Start();
+        _usbDeviceMonitor.Start();
         _resourceMonitor.Start();
 
         SetRunning(true);
@@ -174,11 +189,15 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
                     await _orchestrator.ProcessAsync(since, stoppingToken);
                     since = DateTimeOffset.UtcNow - pollInterval;
                     await TrySendHeartbeatAsync(stoppingToken);
+                    await TrySendDailyDigestAsync(stoppingToken);
                     var settings = await _settingsStore.LoadAsync(stoppingToken);
                     _diskSpaceMonitor.Poll(settings);
                     _processWatchdog.Poll(settings);
+                    _serviceWatchdog.Poll(settings);
+                    _usbDeviceMonitor.Poll(settings);
                     _resourceMonitor.Poll(settings);
                     _powerEventMonitor.Poll(settings);
+                    await TryPurgeJournalAsync(settings, stoppingToken);
                     await _orchestrator.FlushOutboxAsync(stoppingToken);
                 }
             }
@@ -207,6 +226,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _sessionMonitor.SessionEventDetected -= OnExternalEventDetected;
         _diskSpaceMonitor.DiskEventDetected -= OnExternalEventDetected;
         _processWatchdog.ProcessEventDetected -= OnExternalEventDetected;
+        _serviceWatchdog.ServiceEventDetected -= OnExternalEventDetected;
+        _usbDeviceMonitor.UsbEventDetected -= OnExternalEventDetected;
         _resourceMonitor.ResourceEventDetected -= OnExternalEventDetected;
         SetRunning(false);
         _logger.LogInformation("Фоновый мониторинг событий остановлен");
@@ -219,6 +240,8 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
         _sessionMonitor.Dispose();
         _diskSpaceMonitor.Dispose();
         _processWatchdog.Dispose();
+        _serviceWatchdog.Dispose();
+        _usbDeviceMonitor.Dispose();
         _resourceMonitor.Dispose();
         base.Dispose();
     }
@@ -304,6 +327,51 @@ public sealed class MonitoringHostedService : BackgroundService, IMonitoringCont
 
         await _orchestrator.ProcessMachineEventAsync(heartbeat, settings, cancellationToken);
         _lastHeartbeatAt = now;
+    }
+
+    private async Task TrySendDailyDigestAsync(CancellationToken cancellationToken)
+    {
+        var settings = await _settingsStore.LoadAsync(cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+        if (!DailyDigestBuilder.ShouldSend(
+                settings.DailyDigestEnabled,
+                settings.DailyDigestTime,
+                now,
+                _lastDailyDigestLocalDate))
+        {
+            return;
+        }
+
+        if (!settings.IsValid || !settings.HasEnabledChannel)
+        {
+            return;
+        }
+
+        if (settings.IsWithinQuietHours(now))
+        {
+            return;
+        }
+
+        var recent = await _alertJournal.GetRecentAsync(200, cancellationToken);
+        var digest = DailyDigestBuilder.Build(recent, now);
+        await _orchestrator.ProcessMachineEventAsync(digest, settings, cancellationToken);
+        _lastDailyDigestLocalDate = DateOnly.FromDateTime(now.ToLocalTime().DateTime);
+    }
+
+    private async Task TryPurgeJournalAsync(UserSettings settings, CancellationToken cancellationToken)
+    {
+        if (settings.JournalRetentionDays <= 0)
+        {
+            return;
+        }
+
+        var removed = await _alertJournal.PurgeOlderThanAsync(
+            TimeSpan.FromDays(settings.JournalRetentionDays),
+            cancellationToken);
+        if (removed > 0)
+        {
+            _logger.LogInformation("Автоочистка журнала удалила {Count} записей", removed);
+        }
     }
 
     private async Task TryRecoverPreviousShutdownAsync(

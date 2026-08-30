@@ -18,6 +18,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly IAlertMuteState _muteState;
     private readonly ISettingsStore _settingsStore;
     private readonly IAlertJournal _alertJournal;
+    private readonly AlertOrchestrator _orchestrator;
     private readonly IDiagnosticsService _diagnosticsService;
     private readonly ILogger<MainViewModel> _logger;
 
@@ -28,6 +29,7 @@ public sealed partial class MainViewModel : ObservableObject
         IAlertMuteState muteState,
         ISettingsStore settingsStore,
         IAlertJournal alertJournal,
+        AlertOrchestrator orchestrator,
         IDiagnosticsService diagnosticsService,
         ILogger<MainViewModel> logger)
     {
@@ -37,6 +39,7 @@ public sealed partial class MainViewModel : ObservableObject
         _muteState = muteState;
         _settingsStore = settingsStore;
         _alertJournal = alertJournal;
+        _orchestrator = orchestrator;
         _diagnosticsService = diagnosticsService;
         _logger = logger;
 
@@ -60,7 +63,7 @@ public sealed partial class MainViewModel : ObservableObject
     public bool IsMuted => _muteState.IsMuted;
 
     [ObservableProperty]
-    private string _statusMessage;
+    private string _statusMessage = string.Empty;
 
     [ObservableProperty]
     private string _setupHint = string.Empty;
@@ -176,6 +179,22 @@ public sealed partial class MainViewModel : ObservableObject
         {
             _logger.LogError(ex, "Не удалось очистить журнал алертов");
             StatusMessage = "Не удалось очистить журнал.";
+        }
+    }
+
+    [RelayCommand]
+    private async Task RetryOutboxAsync()
+    {
+        try
+        {
+            await _orchestrator.FlushOutboxAsync();
+            await RefreshJournalAsync(CancellationToken.None);
+            StatusMessage = "Повторная отправка outbox выполнена.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Не удалось повторить отправку из outbox");
+            StatusMessage = "Не удалось повторить отправку из outbox.";
         }
     }
 
