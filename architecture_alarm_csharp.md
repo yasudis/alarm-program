@@ -37,7 +37,7 @@ tests/
 
 ## 3.1 Domain
 
-- `MachineEventType` (Startup, Shutdown, Restart, UnexpectedShutdown, etc.)
+- `MachineEventType` (Startup, Shutdown, Restart, UnexpectedShutdown, Bsod, CustomEvent, etc.)
 - `MachineEvent` (тип, время, источник, host info)
 - `AlertMessage` (готовый текст для отправки)
 - `UserSettings` (Telegram token, chat id, flags событий)
@@ -58,11 +58,12 @@ tests/
 
 ## 3.3 Infrastructure
 
-- `WindowsEventLogReader` (чтение Event Log).
+- `WindowsEventLogReader` (чтение Event Log, включая Security 4720/4732 и пользовательские Event ID).
 - `TelegramNotificationChannel` (HTTP вызовы Telegram Bot API).
 - `DiscordWebhookChannel` (опционально).
 - `HttpWebhookNotificationChannel` (произвольный HTTPS JSON POST).
 - `SmtpNotificationChannel` (опциональный Email через SMTP).
+- `WindowsFirewallMonitor` / `IcmpHostPingWatchdog` (брандмауэр и ping внешних хостов).
 - `SettingsStore` (JSON + защита секретов, включая SMTP-пароль).
 - `AppLogger` (Serilog/EventLog).
 

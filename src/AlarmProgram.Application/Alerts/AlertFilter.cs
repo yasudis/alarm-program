@@ -50,6 +50,11 @@ public sealed class AlertFilter
             return true;
         }
 
+        if (settings.CriticalAlertsOnly && !LocalAlertRules.IsCritical(machineEvent.Type))
+        {
+            return false;
+        }
+
         var timestamp = now ?? DateTimeOffset.UtcNow;
         var isCritical = machineEvent.Type == MachineEventType.UnexpectedShutdown;
         var bypassesAntiSpam = isCritical || LocalAlertRules.BypassesAntiSpam(machineEvent.Type);

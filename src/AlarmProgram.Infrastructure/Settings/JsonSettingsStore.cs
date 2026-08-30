@@ -169,6 +169,19 @@ public sealed class JsonSettingsStore : ISettingsStore
         NotifyOnWindowsUpdateFailed = dto.NotifyOnWindowsUpdateFailed,
         NotifyOnDiskError = dto.NotifyOnDiskError,
         NotifyOnStatusSnapshot = dto.NotifyOnStatusSnapshot,
+        NotifyOnBsod = dto.NotifyOnBsod,
+        NotifyOnUserAccountCreated = dto.NotifyOnUserAccountCreated,
+        NotifyOnAdminGroupChanged = dto.NotifyOnAdminGroupChanged,
+        NotifyOnFirewallDisabled = dto.NotifyOnFirewallDisabled,
+        NotifyOnHostUnreachable = dto.NotifyOnHostUnreachable,
+        NotifyOnHostRestored = dto.NotifyOnHostRestored,
+        WatchedHosts = dto.WatchedHosts ?? string.Empty,
+        NotifyOnCustomEvent = dto.NotifyOnCustomEvent,
+        CustomEventIds = dto.CustomEventIds ?? string.Empty,
+        CriticalAlertsOnly = dto.CriticalAlertsOnly,
+        WeeklyDigestEnabled = dto.WeeklyDigestEnabled,
+        WeeklyDigestDay = ParseDayOfWeek(dto.WeeklyDigestDay, DayOfWeek.Monday),
+        WeeklyDigestTime = ParseTime(dto.WeeklyDigestTime, TimeSpan.FromHours(9)),
         StartupGracePeriodMinutes = dto.StartupGracePeriodMinutes < 0 ? 0 : dto.StartupGracePeriodMinutes,
         MaxAlertsPerHour = dto.MaxAlertsPerHour < 0 ? 0 : dto.MaxAlertsPerHour,
         PlaySoundOnCriticalAlerts = dto.PlaySoundOnCriticalAlerts,
@@ -257,6 +270,19 @@ public sealed class JsonSettingsStore : ISettingsStore
         NotifyOnWindowsUpdateFailed = settings.NotifyOnWindowsUpdateFailed,
         NotifyOnDiskError = settings.NotifyOnDiskError,
         NotifyOnStatusSnapshot = settings.NotifyOnStatusSnapshot,
+        NotifyOnBsod = settings.NotifyOnBsod,
+        NotifyOnUserAccountCreated = settings.NotifyOnUserAccountCreated,
+        NotifyOnAdminGroupChanged = settings.NotifyOnAdminGroupChanged,
+        NotifyOnFirewallDisabled = settings.NotifyOnFirewallDisabled,
+        NotifyOnHostUnreachable = settings.NotifyOnHostUnreachable,
+        NotifyOnHostRestored = settings.NotifyOnHostRestored,
+        WatchedHosts = settings.WatchedHosts ?? string.Empty,
+        NotifyOnCustomEvent = settings.NotifyOnCustomEvent,
+        CustomEventIds = settings.CustomEventIds ?? string.Empty,
+        CriticalAlertsOnly = settings.CriticalAlertsOnly,
+        WeeklyDigestEnabled = settings.WeeklyDigestEnabled,
+        WeeklyDigestDay = settings.WeeklyDigestDay.ToString(),
+        WeeklyDigestTime = FormatTime(settings.WeeklyDigestTime),
         StartupGracePeriodMinutes = settings.StartupGracePeriodMinutes,
         MaxAlertsPerHour = settings.MaxAlertsPerHour,
         PlaySoundOnCriticalAlerts = settings.PlaySoundOnCriticalAlerts,
@@ -301,6 +327,11 @@ public sealed class JsonSettingsStore : ISettingsStore
 
         return fallback;
     }
+
+    private static DayOfWeek ParseDayOfWeek(string? value, DayOfWeek fallback) =>
+        Enum.TryParse<DayOfWeek>(value, ignoreCase: true, out var parsed)
+            ? parsed
+            : fallback;
 
     private static string FormatTime(TimeSpan value) =>
         $"{(int)value.TotalHours:00}:{value.Minutes:00}";

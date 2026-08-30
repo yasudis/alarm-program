@@ -5,6 +5,8 @@ using AlarmProgram.Infrastructure.Autostart;
 using AlarmProgram.Infrastructure.Diagnostics;
 using AlarmProgram.Infrastructure.Disk;
 using AlarmProgram.Infrastructure.Events;
+using AlarmProgram.Infrastructure.Firewall;
+using AlarmProgram.Infrastructure.HostPing;
 using AlarmProgram.Infrastructure.Journal;
 using AlarmProgram.Infrastructure.Network;
 using AlarmProgram.Infrastructure.Notifications;
@@ -45,6 +47,8 @@ public static class DependencyInjection
         services.AddSingleton<IUsbDeviceMonitor, RemovableDriveUsbMonitor>();
         services.AddSingleton<IResourceMonitor, WindowsResourceMonitor>();
         services.AddSingleton<IPendingRebootMonitor, WindowsPendingRebootMonitor>();
+        services.AddSingleton<IFirewallMonitor, WindowsFirewallMonitor>();
+        services.AddSingleton<IHostPingWatchdog, IcmpHostPingWatchdog>();
         services.AddSingleton<IEventCollector, WindowsEventLogReader>();
         services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromSeconds(30) });
         services.AddSingleton<ISmtpMailSender, SystemSmtpMailSender>();

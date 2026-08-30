@@ -110,6 +110,17 @@ public class AlertAntiSpamTests
         Assert.False(_filter.ShouldNotify(CreateEvent(MachineEventType.StatusSnapshot), settings));
     }
 
+    [Fact]
+    public void ShouldNotify_critical_only_mode_drops_regular_events()
+    {
+        var settings = ValidSettings();
+        settings.CriticalAlertsOnly = true;
+
+        Assert.False(_filter.ShouldNotify(CreateEvent(MachineEventType.Startup), settings));
+        Assert.True(_filter.ShouldNotify(CreateEvent(MachineEventType.Bsod), settings));
+        Assert.True(_filter.ShouldNotify(CreateEvent(MachineEventType.StatusSnapshot), settings));
+    }
+
     private static UserSettings ValidSettings() => new()
     {
         TelegramEnabled = true,
@@ -119,6 +130,7 @@ public class AlertAntiSpamTests
         NotifyOnDefenderThreat = true,
         NotifyOnDiskError = true,
         NotifyOnStatusSnapshot = true,
+        NotifyOnBsod = true,
         HeartbeatEnabled = true
     };
 

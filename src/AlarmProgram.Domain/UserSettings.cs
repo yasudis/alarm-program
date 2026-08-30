@@ -121,6 +121,32 @@ public sealed class UserSettings
 
     public bool NotifyOnStatusSnapshot { get; set; } = true;
 
+    public bool NotifyOnBsod { get; set; } = true;
+
+    public bool NotifyOnUserAccountCreated { get; set; } = true;
+
+    public bool NotifyOnAdminGroupChanged { get; set; } = true;
+
+    public bool NotifyOnFirewallDisabled { get; set; } = true;
+
+    public bool NotifyOnHostUnreachable { get; set; }
+
+    public bool NotifyOnHostRestored { get; set; }
+
+    public string WatchedHosts { get; set; } = string.Empty;
+
+    public bool NotifyOnCustomEvent { get; set; }
+
+    public string CustomEventIds { get; set; } = string.Empty;
+
+    public bool CriticalAlertsOnly { get; set; }
+
+    public bool WeeklyDigestEnabled { get; set; }
+
+    public DayOfWeek WeeklyDigestDay { get; set; } = DayOfWeek.Monday;
+
+    public TimeSpan WeeklyDigestTime { get; set; } = TimeSpan.FromHours(9);
+
     public int StartupGracePeriodMinutes { get; set; }
 
     public int MaxAlertsPerHour { get; set; }
@@ -193,6 +219,14 @@ public sealed class UserSettings
         MachineEventType.WindowsUpdateFailed => NotifyOnWindowsUpdateFailed,
         MachineEventType.DiskError => NotifyOnDiskError,
         MachineEventType.StatusSnapshot => NotifyOnStatusSnapshot,
+        MachineEventType.Bsod => NotifyOnBsod,
+        MachineEventType.UserAccountCreated => NotifyOnUserAccountCreated,
+        MachineEventType.AdminGroupChanged => NotifyOnAdminGroupChanged,
+        MachineEventType.FirewallDisabled => NotifyOnFirewallDisabled,
+        MachineEventType.HostUnreachable => NotifyOnHostUnreachable,
+        MachineEventType.HostRestored => NotifyOnHostRestored,
+        MachineEventType.CustomEvent => NotifyOnCustomEvent,
+        MachineEventType.WeeklyDigest => WeeklyDigestEnabled,
         _ => false
     };
 
@@ -201,6 +235,10 @@ public sealed class UserSettings
     public IReadOnlyList<string> GetWatchedProcessNames() => ParseWatchedProcessNames(WatchedProcessNames);
 
     public IReadOnlyList<string> GetWatchedServiceNames() => ParseWatchedServiceNames(WatchedServiceNames);
+
+    public IReadOnlyList<string> GetWatchedHosts() => ParseWatchedHosts(WatchedHosts);
+
+    public IReadOnlyList<int> GetCustomEventIds() => ParseCustomEventIds(CustomEventIds);
 
     public IReadOnlyList<string> GetSmtpRecipients() => ParseEmailAddresses(SmtpTo);
 
@@ -230,6 +268,52 @@ public sealed class UserSettings
             .Where(name => !string.IsNullOrWhiteSpace(name))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    public static IReadOnlyList<string> ParseWatchedHosts(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return [];
+        }
+
+        return raw
+            .Split([',', ';', '\n', '\r', ' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(NormalizeHost)
+            .Where(host => !string.IsNullOrWhiteSpace(host))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public static string NormalizeHost(string? host)
+    {
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            return string.Empty;
+        }
+
+        return host.Trim().Trim('"').TrimEnd('.');
+    }
+
+    public static IReadOnlyList<int> ParseCustomEventIds(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return [];
+        }
+
+        var ids = new List<int>();
+        foreach (var token in raw.Split(
+                     [',', ';', '\n', '\r', ' ', '\t'],
+                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (int.TryParse(token, out var id) && id is >= 1 and <= 65535 && !ids.Contains(id))
+            {
+                ids.Add(id);
+            }
+        }
+
+        return ids;
     }
 
     public static IReadOnlyList<string> ParseWatchedServiceNames(string? raw)
@@ -508,8 +592,52 @@ public sealed class UserSettings
             errors.Add("Лимит алертов в час должен быть от 0 до 200 (0 — без лимита).");
         }
 
+        if (NotifyOnHostUnreachable || NotifyOnHostRestored)
+        {
+            var hosts = GetWatchedHosts();
+            if (hosts.Count == 0)
+            {
+                errors.Add("Укажите хотя бы один хост для ping watchdog.");
+            }
+            else if (hosts.Count > 10)
+            {
+                errors.Add("Можно указать не более 10 хостов для ping.");
+            }
+            else if (hosts.Any(host => host.Length > 253 || host.Contains('\\') || host.Contains('/') || host.Contains(' ')))
+            {
+                errors.Add("Некорректный хост. Укажите имя или IP, например 8.8.8.8 или nas.local.");
+            }
+        }
+
+        if (NotifyOnCustomEvent)
+        {
+            var customIds = GetCustomEventIds();
+            if (customIds.Count == 0)
+            {
+                errors.Add("Укажите хотя бы один Event ID для пользовательских событий.");
+            }
+            else if (customIds.Count > 20)
+            {
+                errors.Add("Можно указать не более 20 пользовательских Event ID.");
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(CustomEventIds)
+                 && ParseCustomEventTokens(CustomEventIds).Any(token => !int.TryParse(token, out var id) || id is < 1 or > 65535))
+        {
+            errors.Add("Некорректный пользовательский Event ID. Укажите числа от 1 до 65535 через запятую.");
+        }
+
+        if (WeeklyDigestEnabled
+            && (WeeklyDigestTime < TimeSpan.Zero || WeeklyDigestTime >= TimeSpan.FromDays(1)))
+        {
+            errors.Add("Некорректное время еженедельного дайджеста.");
+        }
+
         return errors;
     }
+
+    private static IEnumerable<string> ParseCustomEventTokens(string raw) =>
+        raw.Split([',', ';', '\n', '\r', ' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private static bool IsValidDiscordWebhook(string url)
     {

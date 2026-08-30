@@ -134,6 +134,32 @@ internal sealed class SettingsFileDto
 
     public bool NotifyOnStatusSnapshot { get; set; } = true;
 
+    public bool NotifyOnBsod { get; set; } = true;
+
+    public bool NotifyOnUserAccountCreated { get; set; } = true;
+
+    public bool NotifyOnAdminGroupChanged { get; set; } = true;
+
+    public bool NotifyOnFirewallDisabled { get; set; } = true;
+
+    public bool NotifyOnHostUnreachable { get; set; }
+
+    public bool NotifyOnHostRestored { get; set; }
+
+    public string WatchedHosts { get; set; } = string.Empty;
+
+    public bool NotifyOnCustomEvent { get; set; }
+
+    public string CustomEventIds { get; set; } = string.Empty;
+
+    public bool CriticalAlertsOnly { get; set; }
+
+    public bool WeeklyDigestEnabled { get; set; }
+
+    public string WeeklyDigestDay { get; set; } = "Monday";
+
+    public string WeeklyDigestTime { get; set; } = "09:00";
+
     public int StartupGracePeriodMinutes { get; set; }
 
     public int MaxAlertsPerHour { get; set; }

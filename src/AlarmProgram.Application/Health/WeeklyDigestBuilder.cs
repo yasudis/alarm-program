@@ -3,7 +3,7 @@ using AlarmProgram.Domain;
 
 namespace AlarmProgram.Application.Health;
 
-public static class DailyDigestBuilder
+public static class WeeklyDigestBuilder
 {
     public static MachineEvent Build(
         IReadOnlyList<AlertJournalEntry> entries,
@@ -11,7 +11,7 @@ public static class DailyDigestBuilder
     {
         ArgumentNullException.ThrowIfNull(entries);
 
-        var since = now - TimeSpan.FromDays(1);
+        var since = now - TimeSpan.FromDays(7);
         var recent = entries
             .Where(entry =>
                 entry.Timestamp >= since
@@ -22,29 +22,30 @@ public static class DailyDigestBuilder
 
         if (recent.Length == 0)
         {
-            return SystemHealthRules.DailyDigest(0, "За последние 24 часа алертов не было.");
+            return SystemHealthRules.WeeklyDigest(0, "За последние 7 дней алертов не было.");
         }
 
         var byType = recent
             .GroupBy(entry => entry.EventType)
             .OrderByDescending(group => group.Count())
             .ThenBy(group => group.Key.ToString(), StringComparer.Ordinal)
-            .Take(8)
+            .Take(10)
             .ToArray();
 
         var builder = new StringBuilder();
-        builder.AppendLine($"За последние 24 часа алертов: {recent.Length}.");
+        builder.AppendLine($"За последние 7 дней алертов: {recent.Length}.");
         builder.AppendLine("По типам:");
         foreach (var group in byType)
         {
             builder.AppendLine($"- {group.Key}: {group.Count()}");
         }
 
-        return SystemHealthRules.DailyDigest(recent.Length, builder.ToString().TrimEnd());
+        return SystemHealthRules.WeeklyDigest(recent.Length, builder.ToString().TrimEnd());
     }
 
     public static bool ShouldSend(
         bool enabled,
+        DayOfWeek digestDay,
         TimeSpan digestTime,
         DateTimeOffset now,
         DateOnly? lastSentLocalDate)
@@ -54,18 +55,12 @@ public static class DailyDigestBuilder
             return false;
         }
 
-        if (digestTime < TimeSpan.Zero || digestTime >= TimeSpan.FromDays(1))
-        {
-            return false;
-        }
-
         var localNow = now.ToLocalTime();
-        var localDate = DateOnly.FromDateTime(localNow.DateTime);
-        if (lastSentLocalDate == localDate)
+        if (localNow.DayOfWeek != digestDay)
         {
             return false;
         }
 
-        return localNow.TimeOfDay >= digestTime;
+        return DailyDigestBuilder.ShouldSend(true, digestTime, now, lastSentLocalDate);
     }
 }

@@ -1,6 +1,7 @@
 using System.Diagnostics.Eventing.Reader;
 using AlarmProgram.Application.Abstractions;
 using AlarmProgram.Application.Contracts;
+using AlarmProgram.Domain;
 using Microsoft.Extensions.Logging;
 
 namespace AlarmProgram.Infrastructure.Events;
@@ -30,36 +31,64 @@ public sealed class WindowsEventLogReader : IEventCollector
         7,
         11,
         51,
-        153
+        153,
+        1001,
+        4720,
+        4732,
+        4728
     ];
 
     private static readonly (string LogName, int[] EventIds)[] LogQueries =
     [
-        ("System", [12, 13, 41, 1074, 1076, 6005, 6006, 6008, 6009, 7001, 7002, 7, 11, 51, 153, 20]),
-        ("Security", [4625]),
+        ("System", [12, 13, 41, 1074, 1076, 6005, 6006, 6008, 6009, 7001, 7002, 7, 11, 51, 153, 20, 1001]),
+        ("Security", [4625, 4720, 4732, 4728]),
         ("Application", [1000, 1002]),
         ("Microsoft-Windows-Windows Defender/Operational", [1116, 1117, 5001])
     ];
 
     private const int MaxEvents = 500;
     private readonly ILogger<WindowsEventLogReader> _logger;
+    private readonly ISettingsStore? _settingsStore;
 
     public WindowsEventLogReader(ILogger<WindowsEventLogReader> logger)
+        : this(logger, settingsStore: null)
     {
-        _logger = logger;
     }
 
-    public Task<IReadOnlyList<RawSystemEvent>> CollectAsync(
+    public WindowsEventLogReader(ILogger<WindowsEventLogReader> logger, ISettingsStore? settingsStore)
+    {
+        _logger = logger;
+        _settingsStore = settingsStore;
+    }
+
+    public async Task<IReadOnlyList<RawSystemEvent>> CollectAsync(
         DateTimeOffset since,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        var extraIds = Array.Empty<int>();
+        if (_settingsStore is not null)
+        {
+            try
+            {
+                var settings = await _settingsStore.LoadAsync(cancellationToken);
+                extraIds = settings.GetCustomEventIds().ToArray();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Не удалось загрузить пользовательские Event ID");
+            }
+        }
+
         var events = new List<RawSystemEvent>();
         foreach (var (logName, eventIds) in LogQueries)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            events.AddRange(ReadLog(logName, eventIds, since, cancellationToken));
+            var merged = extraIds.Length == 0
+                ? eventIds
+                : eventIds.Concat(extraIds).Distinct().ToArray();
+            events.AddRange(ReadLog(logName, merged, since, cancellationToken));
         }
 
         var ordered = events
@@ -71,7 +100,7 @@ public sealed class WindowsEventLogReader : IEventCollector
             "Прочитано {Count} системных событий начиная с {Since}",
             ordered.Length,
             since);
-        return Task.FromResult<IReadOnlyList<RawSystemEvent>>(ordered);
+        return ordered;
     }
 
     private List<RawSystemEvent> ReadLog(

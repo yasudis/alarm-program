@@ -96,7 +96,7 @@ public class EventClassifierTests
     {
         foreach (var eventId in WindowsEventLogReader.CandidateEventIds)
         {
-            var result = _classifier.Classify(CreateRaw(eventId, "initiated the restart of computer", SourceFor(eventId)));
+            var result = _classifier.Classify(CreateRaw(eventId, MessageFor(eventId), SourceFor(eventId)));
             Assert.NotNull(result);
             Assert.NotEqual(MachineEventType.Unknown, result.Type);
         }
@@ -109,6 +109,8 @@ public class EventClassifierTests
     [InlineData(51, "Ntfs", MachineEventType.DiskError)]
     [InlineData(153, "stornvme", MachineEventType.DiskError)]
     [InlineData(5001, "Microsoft-Windows-Windows Defender", MachineEventType.DefenderThreat)]
+    [InlineData(1001, "Microsoft-Windows-WER-SystemErrorReporting", MachineEventType.Bsod)]
+    [InlineData(4720, "Microsoft-Windows-Security-Auditing", MachineEventType.UserAccountCreated)]
     public void Classify_maps_source_gated_event_ids(int eventId, string source, MachineEventType expectedType)
     {
         var result = _classifier.Classify(CreateRaw(eventId, "failure", source));
@@ -121,6 +123,7 @@ public class EventClassifierTests
     [InlineData(20, "Microsoft-Windows-EventLog")]
     [InlineData(7, "Service Control Manager")]
     [InlineData(5001, "Microsoft-Windows-EventLog")]
+    [InlineData(1001, "Application Error")]
     public void Classify_ignores_source_gated_ids_from_unrelated_providers(int eventId, string source)
     {
         Assert.Null(_classifier.Classify(CreateRaw(eventId, "unrelated", source)));
@@ -141,11 +144,44 @@ public class EventClassifierTests
         HostName = "TEST-PC"
     };
 
+    [Fact]
+    public void Classify_maps_admin_group_change_only_for_administrators()
+    {
+        var admin = _classifier.Classify(CreateRaw(
+            4732,
+            "A member was added to security-enabled local group Administrators. SID S-1-5-32-544",
+            "Microsoft-Windows-Security-Auditing"));
+        var other = _classifier.Classify(CreateRaw(
+            4732,
+            "A member was added to Users",
+            "Microsoft-Windows-Security-Auditing"));
+
+        Assert.Equal(MachineEventType.AdminGroupChanged, admin!.Type);
+        Assert.Null(other);
+    }
+
+    [Fact]
+    public void Classify_maps_1001_with_bugcheck_message_even_without_source()
+    {
+        var result = _classifier.Classify(CreateRaw(1001, "The computer has rebooted from a bugcheck", "Unknown"));
+
+        Assert.Equal(MachineEventType.Bsod, result!.Type);
+    }
+
+    private static string MessageFor(int eventId) => eventId switch
+    {
+        4732 or 4728 => "A member was added to Administrators",
+        1001 => "The computer has rebooted from a bugcheck",
+        _ => "initiated the restart of computer"
+    };
+
     private static string SourceFor(int eventId) => eventId switch
     {
         20 => "Microsoft-Windows-WindowsUpdateClient",
         7 or 11 or 51 or 153 => "disk",
         5001 => "Microsoft-Windows-Windows Defender",
+        1001 => "Microsoft-Windows-WER-SystemErrorReporting",
+        4720 or 4732 or 4728 => "Microsoft-Windows-Security-Auditing",
         _ => "Microsoft-Windows-EventLog"
     };
 }

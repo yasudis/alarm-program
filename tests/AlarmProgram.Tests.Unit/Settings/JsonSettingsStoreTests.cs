@@ -74,7 +74,20 @@ public class JsonSettingsStoreTests
             NotifyOnDefenderThreat = true,
             NotifyOnWindowsUpdateFailed = false,
             StartupGracePeriodMinutes = 3,
-            MaxAlertsPerHour = 12
+            MaxAlertsPerHour = 12,
+            NotifyOnBsod = false,
+            NotifyOnUserAccountCreated = true,
+            NotifyOnAdminGroupChanged = false,
+            NotifyOnFirewallDisabled = true,
+            NotifyOnHostUnreachable = true,
+            NotifyOnHostRestored = true,
+            WatchedHosts = "8.8.8.8",
+            NotifyOnCustomEvent = true,
+            CustomEventIds = "7045,7040",
+            CriticalAlertsOnly = true,
+            WeeklyDigestEnabled = true,
+            WeeklyDigestDay = DayOfWeek.Friday,
+            WeeklyDigestTime = TimeSpan.FromHours(18)
         };
 
         await store.SaveAsync(original);
@@ -124,6 +137,19 @@ public class JsonSettingsStoreTests
         Assert.False(restored.NotifyOnWindowsUpdateFailed);
         Assert.Equal(3, restored.StartupGracePeriodMinutes);
         Assert.Equal(12, restored.MaxAlertsPerHour);
+        Assert.False(restored.NotifyOnBsod);
+        Assert.True(restored.NotifyOnUserAccountCreated);
+        Assert.False(restored.NotifyOnAdminGroupChanged);
+        Assert.True(restored.NotifyOnFirewallDisabled);
+        Assert.True(restored.NotifyOnHostUnreachable);
+        Assert.True(restored.NotifyOnHostRestored);
+        Assert.Equal("8.8.8.8", restored.WatchedHosts);
+        Assert.True(restored.NotifyOnCustomEvent);
+        Assert.Equal("7045,7040", restored.CustomEventIds);
+        Assert.True(restored.CriticalAlertsOnly);
+        Assert.True(restored.WeeklyDigestEnabled);
+        Assert.Equal(DayOfWeek.Friday, restored.WeeklyDigestDay);
+        Assert.Equal(TimeSpan.FromHours(18), restored.WeeklyDigestTime);
     }
 
     [Fact]

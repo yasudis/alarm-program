@@ -195,6 +195,45 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _notifyOnStatusSnapshot = true;
 
     [ObservableProperty]
+    private bool _notifyOnBsod = true;
+
+    [ObservableProperty]
+    private bool _notifyOnUserAccountCreated = true;
+
+    [ObservableProperty]
+    private bool _notifyOnAdminGroupChanged = true;
+
+    [ObservableProperty]
+    private bool _notifyOnFirewallDisabled = true;
+
+    [ObservableProperty]
+    private bool _notifyOnHostUnreachable;
+
+    [ObservableProperty]
+    private bool _notifyOnHostRestored;
+
+    [ObservableProperty]
+    private string _watchedHosts = string.Empty;
+
+    [ObservableProperty]
+    private bool _notifyOnCustomEvent;
+
+    [ObservableProperty]
+    private string _customEventIds = string.Empty;
+
+    [ObservableProperty]
+    private bool _criticalAlertsOnly;
+
+    [ObservableProperty]
+    private bool _weeklyDigestEnabled;
+
+    [ObservableProperty]
+    private string _weeklyDigestDay = "Monday";
+
+    [ObservableProperty]
+    private string _weeklyDigestTime = "09:00";
+
+    [ObservableProperty]
     private int _startupGracePeriodMinutes;
 
     [ObservableProperty]
@@ -573,6 +612,19 @@ public sealed partial class SettingsViewModel : ObservableObject
         NotifyOnWindowsUpdateFailed = NotifyOnWindowsUpdateFailed,
         NotifyOnDiskError = NotifyOnDiskError,
         NotifyOnStatusSnapshot = NotifyOnStatusSnapshot,
+        NotifyOnBsod = NotifyOnBsod,
+        NotifyOnUserAccountCreated = NotifyOnUserAccountCreated,
+        NotifyOnAdminGroupChanged = NotifyOnAdminGroupChanged,
+        NotifyOnFirewallDisabled = NotifyOnFirewallDisabled,
+        NotifyOnHostUnreachable = NotifyOnHostUnreachable,
+        NotifyOnHostRestored = NotifyOnHostRestored,
+        WatchedHosts = WatchedHosts.Trim(),
+        NotifyOnCustomEvent = NotifyOnCustomEvent,
+        CustomEventIds = CustomEventIds.Trim(),
+        CriticalAlertsOnly = CriticalAlertsOnly,
+        WeeklyDigestEnabled = WeeklyDigestEnabled,
+        WeeklyDigestDay = ParseDayOfWeekOrDefault(WeeklyDigestDay, DayOfWeek.Monday),
+        WeeklyDigestTime = ParseTimeOrDefault(WeeklyDigestTime, TimeSpan.FromHours(9)),
         StartupGracePeriodMinutes = StartupGracePeriodMinutes,
         MaxAlertsPerHour = MaxAlertsPerHour,
         PlaySoundOnCriticalAlerts = PlaySoundOnCriticalAlerts,
@@ -647,6 +699,19 @@ public sealed partial class SettingsViewModel : ObservableObject
         NotifyOnWindowsUpdateFailed = settings.NotifyOnWindowsUpdateFailed;
         NotifyOnDiskError = settings.NotifyOnDiskError;
         NotifyOnStatusSnapshot = settings.NotifyOnStatusSnapshot;
+        NotifyOnBsod = settings.NotifyOnBsod;
+        NotifyOnUserAccountCreated = settings.NotifyOnUserAccountCreated;
+        NotifyOnAdminGroupChanged = settings.NotifyOnAdminGroupChanged;
+        NotifyOnFirewallDisabled = settings.NotifyOnFirewallDisabled;
+        NotifyOnHostUnreachable = settings.NotifyOnHostUnreachable;
+        NotifyOnHostRestored = settings.NotifyOnHostRestored;
+        WatchedHosts = settings.WatchedHosts ?? string.Empty;
+        NotifyOnCustomEvent = settings.NotifyOnCustomEvent;
+        CustomEventIds = settings.CustomEventIds ?? string.Empty;
+        CriticalAlertsOnly = settings.CriticalAlertsOnly;
+        WeeklyDigestEnabled = settings.WeeklyDigestEnabled;
+        WeeklyDigestDay = settings.WeeklyDigestDay.ToString();
+        WeeklyDigestTime = FormatTime(settings.WeeklyDigestTime);
         StartupGracePeriodMinutes = settings.StartupGracePeriodMinutes;
         MaxAlertsPerHour = settings.MaxAlertsPerHour;
         PlaySoundOnCriticalAlerts = settings.PlaySoundOnCriticalAlerts;
@@ -682,6 +747,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         TimeSpan.TryParse(value, out var parsed)
         && parsed >= TimeSpan.Zero
         && parsed < TimeSpan.FromDays(1)
+            ? parsed
+            : fallback;
+
+    private static DayOfWeek ParseDayOfWeekOrDefault(string value, DayOfWeek fallback) =>
+        Enum.TryParse<DayOfWeek>(value, ignoreCase: true, out var parsed)
             ? parsed
             : fallback;
 

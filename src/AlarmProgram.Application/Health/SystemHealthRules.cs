@@ -166,6 +166,54 @@ public static class SystemHealthRules
             "Windows сообщает, что требуется перезагрузка (обновления или отложенные операции с файлами).");
     }
 
+    public static MachineEvent? FirewallDisabled(bool isDisabled)
+    {
+        if (!isDisabled)
+        {
+            return null;
+        }
+
+        return Create(
+            MachineEventType.FirewallDisabled,
+            "FirewallMonitor",
+            "Один или несколько профилей брандмауэра Windows отключены.");
+    }
+
+    public static MachineEvent? HostUnreachable(string host, bool isReachable)
+    {
+        if (string.IsNullOrWhiteSpace(host) || isReachable)
+        {
+            return null;
+        }
+
+        return Create(
+            MachineEventType.HostUnreachable,
+            "HostPingWatchdog",
+            $"Хост {host} не отвечает на ping.");
+    }
+
+    public static MachineEvent? HostRestored(string host, bool becameReachable)
+    {
+        if (string.IsNullOrWhiteSpace(host) || !becameReachable)
+        {
+            return null;
+        }
+
+        return Create(
+            MachineEventType.HostRestored,
+            "HostPingWatchdog",
+            $"Хост {host} снова отвечает на ping.");
+    }
+
+    public static MachineEvent WeeklyDigest(int alertCount, string summary)
+    {
+        var message = string.IsNullOrWhiteSpace(summary)
+            ? $"За последние 7 дней алертов: {alertCount}."
+            : summary;
+
+        return Create(MachineEventType.WeeklyDigest, "WeeklyDigest", message);
+    }
+
     private static MachineEvent Create(MachineEventType type, string source, string message) => new()
     {
         Type = type,

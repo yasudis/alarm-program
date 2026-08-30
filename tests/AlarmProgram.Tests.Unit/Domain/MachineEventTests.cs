@@ -26,6 +26,14 @@ public class MachineEventTests
     [InlineData(MachineEventType.WindowsUpdateFailed)]
     [InlineData(MachineEventType.DiskError)]
     [InlineData(MachineEventType.StatusSnapshot)]
+    [InlineData(MachineEventType.Bsod)]
+    [InlineData(MachineEventType.UserAccountCreated)]
+    [InlineData(MachineEventType.AdminGroupChanged)]
+    [InlineData(MachineEventType.FirewallDisabled)]
+    [InlineData(MachineEventType.HostUnreachable)]
+    [InlineData(MachineEventType.HostRestored)]
+    [InlineData(MachineEventType.CustomEvent)]
+    [InlineData(MachineEventType.WeeklyDigest)]
     public void MachineEvent_supports_core_event_types(MachineEventType eventType)
     {
         var machineEvent = new MachineEvent

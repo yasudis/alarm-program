@@ -1,6 +1,7 @@
 using AlarmProgram.Application.Abstractions;
 using AlarmProgram.Application.Configuration;
 using AlarmProgram.Application.Contracts;
+using AlarmProgram.Application.Events;
 using AlarmProgram.Domain;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -111,6 +112,8 @@ public sealed class AlertOrchestrator
                 rawEvent.Source);
             return;
         }
+
+        machineEvent ??= CustomEventRules.TryClassify(rawEvent, settings);
 
         if (machineEvent is null)
         {
